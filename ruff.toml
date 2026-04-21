@@ -1,0 +1,14 @@
+target-version = "py313"
+line-length = 100
+
+[lint]
+select = [
+  "E", "F", "W", "I", "N", "UP", "B", "ASYNC", "S", "SIM", "RUF", "D",
+]
+ignore = ["D203", "D213", "D107", "D100", "S101"]
+
+[lint.per-file-ignores]
+"tests/**" = ["D", "S", "E501"]
+
+[format]
+quote-style = "double"
