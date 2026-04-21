@@ -102,7 +102,14 @@ docs/
 
 scripts/
 ├── smoke_test.py            # manueller Live-Test gegen DevInstance
-└── capture_fixtures.py      # Fixture-Aufzeichnung (nur Dev)
+├── capture_fixtures.py      # Fixture-Aufzeichnung (nur Dev, liest ENV-Token)
+├── anonymize_fixtures.py    # ersetzt Identifier/Uploader-Namen/URLs durch Platzhalter
+└── verify_silver.py         # scannt Codebase gegen Silver-Quality-Regeln (CI-tauglich)
+
+# Root-Level Deliverables
+README.md                    # Zweck, Installation, Config, HACS-Hinweise
+CONTRIBUTING.md              # Dev-Setup, Test-Ausführung, Style-Guide
+LICENSE                      # MIT
 
 .github/
 └── workflows/ci.yml
@@ -292,7 +299,7 @@ Alle Features sind über `FEATURE_REGISTRY` konfigurierbar. "Default enabled" gi
 | `pump_battery` | Pumpenbatterie % | devicestatus.pump.battery.percent |
 | `pump_status` | Statustext (Closed Loop / Open Loop / Disconnect) | devicestatus.pump.status.status |
 | `pump_base_basal` | aktuelle Grundrate U/h | devicestatus.pump.extended.BaseBasalRate |
-| `pump_temp_basal_rate` | aktive Temp-Basalrate U/h | abgeleitet aus Treatments oder extended |
+| `pump_temp_basal_rate` | aktive Temp-Basalrate U/h | primär: latest Treatment `eventType=Temp Basal` (`rate`); fallback: `openaps.enacted.rate` |
 | `pump_temp_basal_remaining` | Restzeit Temp-Basal | devicestatus.pump.extended.TempBasalRemaining |
 | `pump_active_profile` | aktives AAPS/Profil-Name | devicestatus.pump.extended.ActiveProfile |
 | `pump_last_bolus_time` | Zeitstempel letzter Bolus | devicestatus.pump.extended.LastBolus |
@@ -702,8 +709,11 @@ Folgende Rollen werden von Subagents übernommen:
 
 - **Explorer**: Holt NS-v3-Doku und cgm-remote-monitor-Referenzen, cached relevante Snippets in `docs/references/`
 - **Planner**: Aus writing-plans-Skill
-- **Code-Reviewer**: Nach jedem Modul-Abschnitt gegen Silver-Checkliste verifizieren
+- **Code-Reviewer**: Nach jedem Modul-Abschnitt gegen Silver-Checkliste verifizieren (Skill `superpowers:code-reviewer`)
+- **Silver-Verifier**: Führt `scripts/verify_silver.py` aus und begutachtet Diff gegen Checkliste
 - **Test-Runner**: pytest-Durchläufe, Coverage-Auswertung
+
+Jede Review-Session liefert einen Report in `docs/reviews/YYYY-MM-DD-<topic>.md` und wird als eigener Git-Commit persistiert, damit auch gescheiterte Reviews nachvollziehbar bleiben.
 
 ## 14. Nicht-funktionale Anforderungen
 
