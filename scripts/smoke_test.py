@@ -48,13 +48,21 @@ async def _run(url: str, token: str, limit: int) -> dict[str, object]:
         entries = await client.get_entries(limit=limit)
         devicestatus = await client.get_devicestatus(limit=limit)
 
+        entries_list = (
+            entries.get("result", []) if isinstance(entries, dict) else (entries or [])
+        )
+        devicestatus_list = (
+            devicestatus.get("result", [])
+            if isinstance(devicestatus, dict)
+            else (devicestatus or [])
+        )
         return {
-            "status_version": status.get("version") if isinstance(status, dict) else None,
-            "capabilities": caps.to_dict(),
-            "entries_count": len(entries.get("result", []) if isinstance(entries, dict) else entries or []),
-            "devicestatus_count": len(
-                devicestatus.get("result", []) if isinstance(devicestatus, dict) else devicestatus or []
+            "status_version": (
+                status.get("version") if isinstance(status, dict) else None
             ),
+            "capabilities": caps.to_dict(),
+            "entries_count": len(entries_list),
+            "devicestatus_count": len(devicestatus_list),
         }
 
 

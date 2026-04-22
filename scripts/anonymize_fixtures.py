@@ -89,7 +89,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("src", nargs="+", help="Source JSON files or directories")
     parser.add_argument("dst", help="Destination directory")
-    parser.add_argument("--epoch-offset", type=int, default=0, help="ms to subtract from timestamps")
+    parser.add_argument(
+        "--epoch-offset", type=int, default=0,
+        help="ms to subtract from timestamps",
+    )
     args = parser.parse_args(argv)
 
     dst_dir = Path(args.dst)

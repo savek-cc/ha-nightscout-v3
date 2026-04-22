@@ -68,9 +68,14 @@ class JwtManager:
             except (ApiError, aiohttp.ClientError, TimeoutError) as exc:
                 last_exc = exc
                 backoff = _BACKOFF_BASE * (2**attempt)
-                _LOGGER.debug("JWT exchange attempt %d failed; sleeping %.1fs", attempt + 1, backoff)
+                _LOGGER.debug(
+                    "JWT exchange attempt %d failed; sleeping %.1fs",
+                    attempt + 1, backoff,
+                )
                 await asyncio.sleep(backoff)
-        raise ApiError(f"JWT exchange gave up after {MAX_REFRESH_ATTEMPTS} attempts: {last_exc}")
+        raise ApiError(
+            f"JWT exchange gave up after {MAX_REFRESH_ATTEMPTS} attempts: {last_exc}"
+        )
 
     async def _exchange_once(self, url: str) -> JwtState:
         try:

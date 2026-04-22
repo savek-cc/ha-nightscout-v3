@@ -80,8 +80,14 @@ def _empty_payload(window_days: int) -> dict[str, Any]:
         "tir_very_high_percent": 0.0,
         "lbgi": 0.0,
         "hbgi": 0.0,
-        "hourly_profile": [{"hour": h, "mean": 0, "median": 0, "min": 0, "max": 0, "n": 0} for h in range(24)],
-        "agp_percentiles": [{"hour": h, "p5": 0, "p25": 0, "p50": 0, "p75": 0, "p95": 0, "n": 0} for h in range(24)],
+        "hourly_profile": [
+            {"hour": h, "mean": 0, "median": 0, "min": 0, "max": 0, "n": 0}
+            for h in range(24)
+        ],
+        "agp_percentiles": [
+            {"hour": h, "p5": 0, "p25": 0, "p50": 0, "p75": 0, "p95": 0, "n": 0}
+            for h in range(24)
+        ],
         "computed_at_ms": int(time.time() * 1000),
     }
 

@@ -99,7 +99,7 @@ class NightscoutConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "invalid_auth"
             except ApiError:
                 errors["base"] = "cannot_connect"
-            except Exception:  # noqa: BLE001 — catch-all for unknown flow paths
+            except Exception:
                 _LOGGER.exception("Unhandled error in user step")
                 errors["base"] = "unknown"
 
@@ -126,7 +126,7 @@ class NightscoutConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "invalid_auth"
             except ApiError:
                 errors["base"] = "cannot_connect"
-            except Exception:  # noqa: BLE001
+            except Exception:
                 _LOGGER.exception("Unhandled error in reauth")
                 errors["base"] = "unknown"
 
@@ -217,7 +217,10 @@ class NightscoutOptionsFlow(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         if user_input is not None:
-            chosen = sorted(set(int(w) for w in user_input.get(OPT_STATS_WINDOWS, [])) | {MANDATORY_STATS_WINDOW})
+            chosen = sorted(
+                {int(w) for w in user_input.get(OPT_STATS_WINDOWS, [])}
+                | {MANDATORY_STATS_WINDOW}
+            )
             return self.async_create_entry(
                 title="", data={**self._entry.options, OPT_STATS_WINDOWS: chosen}
             )
@@ -239,10 +242,20 @@ class NightscoutOptionsFlow(OptionsFlow):
         current = self._entry.options
         schema = vol.Schema(
             {
-                vol.Optional(OPT_TIR_LOW, default=current.get(OPT_TIR_LOW, DEFAULT_TIR_LOW)): vol.All(int, vol.Range(min=40, max=120)),
-                vol.Optional(OPT_TIR_HIGH, default=current.get(OPT_TIR_HIGH, DEFAULT_TIR_HIGH)): vol.All(int, vol.Range(min=120, max=300)),
-                vol.Optional(OPT_TIR_VERY_LOW, default=current.get(OPT_TIR_VERY_LOW, DEFAULT_TIR_VERY_LOW)): vol.All(int, vol.Range(min=30, max=80)),
-                vol.Optional(OPT_TIR_VERY_HIGH, default=current.get(OPT_TIR_VERY_HIGH, DEFAULT_TIR_VERY_HIGH)): vol.All(int, vol.Range(min=180, max=400)),
+                vol.Optional(
+                    OPT_TIR_LOW, default=current.get(OPT_TIR_LOW, DEFAULT_TIR_LOW),
+                ): vol.All(int, vol.Range(min=40, max=120)),
+                vol.Optional(
+                    OPT_TIR_HIGH, default=current.get(OPT_TIR_HIGH, DEFAULT_TIR_HIGH),
+                ): vol.All(int, vol.Range(min=120, max=300)),
+                vol.Optional(
+                    OPT_TIR_VERY_LOW,
+                    default=current.get(OPT_TIR_VERY_LOW, DEFAULT_TIR_VERY_LOW),
+                ): vol.All(int, vol.Range(min=30, max=80)),
+                vol.Optional(
+                    OPT_TIR_VERY_HIGH,
+                    default=current.get(OPT_TIR_VERY_HIGH, DEFAULT_TIR_VERY_HIGH),
+                ): vol.All(int, vol.Range(min=180, max=400)),
             }
         )
         return self.async_show_form(step_id="thresholds", data_schema=schema)
@@ -255,9 +268,25 @@ class NightscoutOptionsFlow(OptionsFlow):
         current = self._entry.options
         schema = vol.Schema(
             {
-                vol.Optional(OPT_POLL_FAST_SECONDS, default=current.get(OPT_POLL_FAST_SECONDS, DEFAULT_POLL_FAST_SECONDS)): vol.All(int, vol.Range(min=30, max=600)),
-                vol.Optional(OPT_POLL_CHANGE_DETECT_MINUTES, default=current.get(OPT_POLL_CHANGE_DETECT_MINUTES, DEFAULT_POLL_CHANGE_DETECT_MINUTES)): vol.All(int, vol.Range(min=1, max=60)),
-                vol.Optional(OPT_POLL_STATS_MINUTES, default=current.get(OPT_POLL_STATS_MINUTES, DEFAULT_POLL_STATS_MINUTES)): vol.All(int, vol.Range(min=5, max=240)),
+                vol.Optional(
+                    OPT_POLL_FAST_SECONDS,
+                    default=current.get(
+                        OPT_POLL_FAST_SECONDS, DEFAULT_POLL_FAST_SECONDS,
+                    ),
+                ): vol.All(int, vol.Range(min=30, max=600)),
+                vol.Optional(
+                    OPT_POLL_CHANGE_DETECT_MINUTES,
+                    default=current.get(
+                        OPT_POLL_CHANGE_DETECT_MINUTES,
+                        DEFAULT_POLL_CHANGE_DETECT_MINUTES,
+                    ),
+                ): vol.All(int, vol.Range(min=1, max=60)),
+                vol.Optional(
+                    OPT_POLL_STATS_MINUTES,
+                    default=current.get(
+                        OPT_POLL_STATS_MINUTES, DEFAULT_POLL_STATS_MINUTES,
+                    ),
+                ): vol.All(int, vol.Range(min=5, max=240)),
             }
         )
         return self.async_show_form(step_id="polling", data_schema=schema)
@@ -267,9 +296,10 @@ class NightscoutOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         try:
             session = async_get_clientsession(self.hass)
-            mgr = JwtManager(session, self._entry.data[CONF_URL], self._entry.data[CONF_ACCESS_TOKEN])
+            url = self._entry.data[CONF_URL]
+            mgr = JwtManager(session, url, self._entry.data[CONF_ACCESS_TOKEN])
             await mgr.initial_exchange()
-            client = NightscoutV3Client(session, self._entry.data[CONF_URL], mgr)
+            client = NightscoutV3Client(session, url, mgr)
             caps = await probe_capabilities(client)
         except (AuthError, ApiError):
             return self.async_abort(reason="cannot_connect")
