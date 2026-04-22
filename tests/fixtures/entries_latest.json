@@ -1,0 +1,13 @@
+{
+  "status": 200,
+  "result": [
+    {
+      "identifier": "aaaaaaaa-1111-4aaa-aaaa-aaaaaaaaaaaa",
+      "date": 1745009700000,
+      "sgv": 142,
+      "direction": "Flat",
+      "type": "sgv",
+      "srvModified": 1745009701000
+    }
+  ]
+}

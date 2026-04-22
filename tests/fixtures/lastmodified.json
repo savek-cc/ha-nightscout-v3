@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "result": {
+    "srvDate": 1745010000000,
+    "collections": {
+      "devicestatus": 1745009999000,
+      "entries": 1745009998000,
+      "treatments": 1745009000000,
+      "profile": 1745000000000
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "status": 200,
+  "result": [
+    {
+      "identifier": "dddddddd-4444-4ddd-dddd-dddddddddddd",
+      "defaultProfile": "TestProfile",
+      "store": {
+        "TestProfile": {
+          "dia": 6,
+          "basal": [{ "time": "00:00", "value": 0.85 }],
+          "units": "mg/dl"
+        }
+      },
+      "srvModified": 1745000001000
+    }
+  ]
+}

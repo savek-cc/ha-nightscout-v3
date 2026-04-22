@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "result": [
+    {
+      "identifier": "cccccccc-3333-4ccc-cccc-cccccccccccc",
+      "eventType": "Sensor Change",
+      "created_at": "2026-04-10T11:00:00Z",
+      "date": 1744282800000,
+      "srvModified": 1744282801000
+    }
+  ]
+}
