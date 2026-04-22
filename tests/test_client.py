@@ -45,7 +45,7 @@ async def test_get_last_modified(session, jwt_manager):
 async def test_get_devicestatus(session, jwt_manager):
     with aioresponses() as m:
         m.get(
-            f"{BASE_URL}/api/v3/devicestatus?limit=1&sort$desc=date",
+            f"{BASE_URL}/api/v3/devicestatus?limit=1&sort$desc=created_at",
             payload=load_fixture("devicestatus_latest"),
         )
         client = NightscoutV3Client(session, BASE_URL, jwt_manager)
@@ -67,7 +67,7 @@ async def test_get_entries_since(session, jwt_manager):
 async def test_get_treatments_event_filter(session, jwt_manager):
     with aioresponses() as m:
         m.get(
-            f"{BASE_URL}/api/v3/treatments?eventType$eq=Sensor%20Change&limit=1&sort$desc=date",
+            f"{BASE_URL}/api/v3/treatments?eventType$eq=Sensor%20Change&limit=1&sort$desc=created_at",
             payload=load_fixture("treatments_sensor_change"),
         )
         client = NightscoutV3Client(session, BASE_URL, jwt_manager)
@@ -130,7 +130,7 @@ async def test_get_devicestatus_with_last_modified(session, jwt_manager):
     with aioresponses() as m:
         m.get(
             f"{BASE_URL}/api/v3/devicestatus"
-            f"?limit=1&sort$desc=date&srvModified$gt=1745009999000",
+            f"?limit=1&sort$desc=created_at&srvModified$gt=1745009999000",
             payload=load_fixture("devicestatus_latest"),
         )
         client = NightscoutV3Client(session, BASE_URL, jwt_manager)
@@ -166,7 +166,7 @@ async def test_get_treatments_without_event_type(session, jwt_manager):
     """event_type=None skips the eventType$eq filter (covers the false branch)."""
     with aioresponses() as m:
         m.get(
-            f"{BASE_URL}/api/v3/treatments?limit=1&sort$desc=date",
+            f"{BASE_URL}/api/v3/treatments?limit=1&sort$desc=created_at",
             payload=load_fixture("treatments_sensor_change"),
         )
         client = NightscoutV3Client(session, BASE_URL, jwt_manager)
@@ -179,8 +179,8 @@ async def test_get_treatments_since_and_last_modified(session, jwt_manager):
     with aioresponses() as m:
         m.get(
             f"{BASE_URL}/api/v3/treatments"
-            f"?eventType$eq=Sensor%20Change&date$gte=1745000000000"
-            f"&limit=1&sort$desc=date&srvModified$gt=1745000000000",
+            f"?eventType$eq=Sensor%20Change&created_at$gte=2025-04-18T18%3A13%3A20Z"
+            f"&limit=1&sort$desc=created_at&srvModified$gt=1745000000000",
             payload=load_fixture("treatments_sensor_change"),
         )
         client = NightscoutV3Client(session, BASE_URL, jwt_manager)

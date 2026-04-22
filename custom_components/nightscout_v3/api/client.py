@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
@@ -12,6 +13,13 @@ from .exceptions import ApiError, AuthError
 
 _LOGGER = logging.getLogger(__name__)
 _DEFAULT_TIMEOUT = aiohttp.ClientTimeout(total=30)
+
+
+def _ms_to_iso(ms: int) -> str:
+    """Convert epoch-ms to ISO-8601 UTC string for v3 created_at filters."""
+    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).isoformat().replace(
+        "+00:00", "Z"
+    )
 
 
 class NightscoutV3Client:
@@ -42,8 +50,14 @@ class NightscoutV3Client:
         *,
         last_modified: int | None = None,
     ) -> list[dict[str, Any]]:
-        """Return the latest devicestatus documents, newest first."""
-        params = [("limit", str(limit)), ("sort$desc", "date")]
+        """Return the latest devicestatus documents, newest first.
+
+        Sorts by `created_at` rather than `date`: v3 passes sort keys to
+        Mongo literally, and devicestatus is indexed on `created_at`, not
+        `date`. Sorting by `date` forces a SORT stage scan over the whole
+        collection (observed: ~1.9M docs → OOM on small-RAM hosts).
+        """
+        params = [("limit", str(limit)), ("sort$desc", "created_at")]
         if last_modified is not None:
             params.append(("srvModified$gt", str(last_modified)))
         return await self._get_list("/api/v3/devicestatus", params)
@@ -74,13 +88,19 @@ class NightscoutV3Client:
         since_date: int | None = None,
         last_modified: int | None = None,
     ) -> list[dict[str, Any]]:
-        """Return treatments matching the given filters, newest first."""
+        """Return treatments matching the given filters, newest first.
+
+        Sorts/filters by `created_at` rather than `date`: treatments is
+        indexed on `created_at` (ISO-8601 string), not `date`. The
+        `since_date` argument stays epoch-ms for caller convenience and
+        is converted to the ISO string form on the wire.
+        """
         params: list[tuple[str, str]] = []
         if event_type is not None:
             params.append(("eventType$eq", event_type))
         if since_date is not None:
-            params.append(("date$gte", str(since_date)))
-        params += [("limit", str(limit)), ("sort$desc", "date")]
+            params.append(("created_at$gte", _ms_to_iso(since_date)))
+        params += [("limit", str(limit)), ("sort$desc", "created_at")]
         if last_modified is not None:
             params.append(("srvModified$gt", str(last_modified)))
         return await self._get_list("/api/v3/treatments", params)
