@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from dataclasses import asdict, dataclass
 from typing import Any, Literal
 
 from .client import NightscoutV3Client
 from .exceptions import ApiError
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(slots=True, frozen=True)
@@ -41,22 +44,48 @@ _INSULIN_CHANGE = "Insulin Change"
 _PUMP_BATTERY_CHANGE = "Pump Battery Change"
 
 
-async def probe_capabilities(client: NightscoutV3Client) -> ServerCapabilities:
-    """Probe the server in parallel; raise if /entries is empty (hard requirement)."""
-    # asyncio.gather schedules and cancels coroutines atomically — preferred
-    # over pre-creating tasks, which can leak on partial failure.
-    status, devicestatus, entries, sensor, site, insulin, battery = await asyncio.gather(
-        client.get_status(),
-        client.get_devicestatus(limit=1),
-        client.get_entries(limit=1),
-        client.get_treatments(event_type=_SENSOR_CHANGE, limit=1),
-        client.get_treatments(event_type=_SITE_CHANGE, limit=1),
-        client.get_treatments(event_type=_INSULIN_CHANGE, limit=1),
-        client.get_treatments(event_type=_PUMP_BATTERY_CHANGE, limit=1),
-    )
+async def _optional(label: str, coro: Any, default: Any) -> Any:
+    try:
+        return await coro
+    except (ApiError, asyncio.TimeoutError) as exc:
+        _LOGGER.debug("Optional capability probe %s degraded: %s", label, exc)
+        return default
 
+
+async def probe_capabilities(client: NightscoutV3Client) -> ServerCapabilities:
+    """Probe the server sequentially.
+
+    Runs probes one at a time to avoid thundering-herd I/O against a cold
+    Mongo cache on servers with years of data. Mandatory probes (status,
+    entries) propagate errors; best-effort probes degrade to "feature not
+    available" on transient failure instead of failing the whole flow.
+    """
+    status = await client.get_status()
+    entries = await client.get_entries(limit=1)
     if not entries:
         raise ApiError("Server exposes no entries; cannot proceed")
+
+    devicestatus = await _optional("devicestatus", client.get_devicestatus(limit=1), [])
+    sensor = await _optional(
+        "sensor_change",
+        client.get_treatments(event_type=_SENSOR_CHANGE, limit=1),
+        [],
+    )
+    site = await _optional(
+        "site_change",
+        client.get_treatments(event_type=_SITE_CHANGE, limit=1),
+        [],
+    )
+    insulin = await _optional(
+        "insulin_change",
+        client.get_treatments(event_type=_INSULIN_CHANGE, limit=1),
+        [],
+    )
+    battery = await _optional(
+        "pump_battery_change",
+        client.get_treatments(event_type=_PUMP_BATTERY_CHANGE, limit=1),
+        [],
+    )
 
     units_raw = (status.get("settings") or {}).get("units", "mg/dl")
     units: Literal["mg/dl", "mmol/L"] = "mmol/L" if units_raw == "mmol/L" else "mg/dl"

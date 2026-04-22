@@ -47,6 +47,28 @@ async def test_probe_raises_if_no_entries(client: AsyncMock) -> None:
         await probe_capabilities(client)
 
 
+async def test_probe_degrades_optional_probes_on_api_error(client: AsyncMock) -> None:
+    """Transient failures on non-mandatory probes must not fail the whole flow."""
+    client.get_devicestatus.side_effect = ApiError("500 on /api/v3/devicestatus")
+    client.get_treatments.side_effect = ApiError("500 on /api/v3/treatments")
+    caps = await probe_capabilities(client)
+    assert caps.has_entries is True
+    assert caps.has_openaps is False
+    assert caps.has_pump is False
+    assert caps.has_uploader_battery is False
+    assert caps.has_treatments_sensor_change is False
+    assert caps.has_treatments_site_change is False
+    assert caps.has_treatments_insulin_change is False
+    assert caps.has_treatments_pump_battery_change is False
+
+
+async def test_probe_propagates_mandatory_probe_errors(client: AsyncMock) -> None:
+    """Mandatory probe (entries) failures must still fail the whole flow."""
+    client.get_entries.side_effect = ApiError("500 on /api/v3/entries")
+    with pytest.raises(ApiError):
+        await probe_capabilities(client)
+
+
 def test_capabilities_round_trip_dict() -> None:
     caps = ServerCapabilities(
         units="mg/dl",
