@@ -21,9 +21,15 @@ SENSITIVE_STRING_KEYS = {
     "notes", "enteredBy", "profileJson", "created_at", "srvModified",
     "url", "baseURL", "instance", "hostname", "author", "email", "username",
     "name", "firstName", "lastName", "patient",
+    # Device/pump identifiers and loop diagnostics that can leak hardware or
+    # phone identifiers through serial numbers, firmware strings, or free-text
+    # openaps reason blobs.
+    "device", "pumpSerial", "pumpType", "pumpModel", "pumpFirmware",
+    "ActiveProfile", "Version", "reason", "consoleLog", "consoleError",
+    "build", "uuid", "serial",
 }
 
-DROP_KEYS = {"_id"}
+DROP_KEYS = {"_id", "identifier", "pumpId"}
 TIMESTAMP_KEYS = {"date", "sysTime", "srvCreated", "srvModified", "mills"}
 
 

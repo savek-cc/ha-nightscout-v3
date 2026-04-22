@@ -22,8 +22,8 @@ SILVER_RULES_REQUIRED = {
     "has-entity-name", "entity-unique-id", "reauthentication-flow",
     "log-when-unavailable", "entity-unavailable", "integration-owner",
     "action-exceptions", "docs-actions", "docs-high-level-description",
-    "docs-installation-instructions", "docs-removal-instructions",
-    "docs-configuration-parameters",
+    "docs-installation-instructions", "docs-installation-parameters",
+    "docs-removal-instructions", "docs-configuration-parameters",
 }
 
 

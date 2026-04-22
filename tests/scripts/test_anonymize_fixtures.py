@@ -63,6 +63,41 @@ def test_main_writes_dst(tmp_path) -> None:
     assert written["result"][0]["sgv"] == 100
 
 
+def test_redacts_device_and_pump_identifiers() -> None:
+    raw = {
+        "status": "OK",
+        "result": [
+            {
+                "_id": "abc",
+                "identifier": "real-patient-uuid",
+                "device": "xDrip-DexbridgeWixel-12345",
+                "pumpSerial": "PUMP_10154415",
+                "pumpType": "Medtronic 722",
+                "ActiveProfile": "primary-user-profile",
+                "reason": "sensitivity raised to 1.3 because pump at CornerCafe's",
+                "pumpId": "xyz-pump-id",
+                "Version": "AAPS build abc123",
+                "sgv": 100,
+            }
+        ],
+    }
+    anon = anonymize_payload(raw, epoch_offset_ms=0)
+    dumped = json.dumps(anon)
+    for leaked in (
+        "xDrip-DexbridgeWixel-12345",
+        "PUMP_10154415",
+        "Medtronic",
+        "primary-user-profile",
+        "CornerCafe",
+        "AAPS build",
+        "real-patient-uuid",
+        "xyz-pump-id",
+    ):
+        assert leaked not in dumped, f"leak: {leaked}"
+    # numeric shape preserved
+    assert anon["result"][0]["sgv"] == 100
+
+
 def test_main_processes_directory(tmp_path) -> None:
     from scripts.anonymize_fixtures import main
 

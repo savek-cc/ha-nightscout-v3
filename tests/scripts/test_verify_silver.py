@@ -109,8 +109,8 @@ def test_main_happy_path(tmp_path: Path, capsys) -> None:
             "has-entity-name", "entity-unique-id", "reauthentication-flow",
             "log-when-unavailable", "entity-unavailable", "integration-owner",
             "action-exceptions", "docs-actions", "docs-high-level-description",
-            "docs-installation-instructions", "docs-removal-instructions",
-            "docs-configuration-parameters",
+            "docs-installation-instructions", "docs-installation-parameters",
+            "docs-removal-instructions", "docs-configuration-parameters",
         ]
     )
     (tmp_path / "quality_scale.yaml").write_text(qs, encoding="utf-8")

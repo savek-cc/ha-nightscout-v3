@@ -91,7 +91,7 @@
       "loop_basaliob": { "name": "Loop Basal-IOB" },
       "loop_activity": { "name": "Loop Aktivität" },
       "loop_cob": { "name": "Loop COB" },
-      "loop_eventual_bg": { "name": "Loop Ziel-BG" },
+      "loop_eventual_bg": { "name": "Loop Prognose-BG" },
       "loop_target_bg": { "name": "Loop Zielwert" },
       "loop_sensitivity_ratio": { "name": "Loop Sensitivität" },
       "loop_reason": { "name": "Loop Begründung" },
