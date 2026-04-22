@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import time
-from unittest.mock import AsyncMock
 
+import aiohttp
 import pytest
 from aioresponses import aioresponses
 
@@ -100,9 +100,111 @@ async def test_refresh_gives_up_after_max_attempts(
             await mgr.initial_exchange()
 
 
+async def test_state_property_before_and_after_exchange(
+    aiohttp_client_session, payload: dict
+) -> None:
+    """state property returns None before exchange, populated after."""
+    mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
+    assert mgr.state is None
+    with aioresponses() as m:
+        m.post(
+            f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
+            payload=payload,
+        )
+        await mgr.initial_exchange()
+    assert mgr.state is not None
+    assert mgr.state.token == payload["result"]["token"]
+
+
+async def test_refresh_forces_new_exchange(
+    aiohttp_client_session, payload: dict
+) -> None:
+    """refresh() forces a new exchange regardless of current TTL."""
+    with aioresponses() as m:
+        m.post(
+            f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
+            payload=payload,
+            repeat=True,
+        )
+        mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
+        first = await mgr.initial_exchange()
+        # Token is still valid; refresh() must call the endpoint anyway.
+        second = await mgr.refresh()
+        # Two requests were sent to the authorization endpoint.
+        total_requests = sum(len(v) for v in m.requests.values())
+    assert total_requests == 2
+    assert second.token == first.token
+
+
+async def test_initial_exchange_raises_api_error_on_403(
+    aiohttp_client_session, monkeypatch
+) -> None:
+    """Non-200/non-401/non-5xx status maps to ApiError (not AuthError)."""
+    async def fake_sleep(_d: float) -> None: ...
+
+    monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
+    with aioresponses() as m:
+        m.post(
+            f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
+            status=403,
+            payload={"status": 403, "message": "forbidden"},
+            repeat=True,
+        )
+        mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
+        with pytest.raises(ApiError) as excinfo:
+            await mgr.initial_exchange()
+    # The retry wrapper swallows the inner 403 ApiError and raises its own
+    # "gave up" message, but the inner "Unexpected status 403" must have
+    # executed at least once (that's the line-85 branch).
+    assert "403" in str(excinfo.value)
+    # Not an AuthError — 401 is the only status that signals auth rejection.
+    assert not isinstance(excinfo.value, AuthError)
+
+
+async def test_initial_exchange_raises_api_error_on_network_error(
+    aiohttp_client_session, monkeypatch
+) -> None:
+    """aiohttp.ClientError before response re-raises as ApiError."""
+    async def fake_sleep(_d: float) -> None: ...
+
+    monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
+    with aioresponses() as m:
+        m.post(
+            f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
+            exception=aiohttp.ClientConnectionError("boom"),
+            repeat=True,
+        )
+        mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
+        with pytest.raises(ApiError, match="Network error"):
+            await mgr.initial_exchange()
+
+
+async def test_initial_exchange_raises_api_error_on_malformed_jwt_body(
+    aiohttp_client_session, monkeypatch
+) -> None:
+    """Missing exp/iat/token in the response body raises ApiError.
+
+    The retry loop treats ApiError as transient, so the inner
+    'Malformed JWT response' message is swallowed by the outer
+    'gave up after N attempts' — both must surface the underlying
+    cause and the line-95 branch must execute at least once.
+    """
+    async def fake_sleep(_d: float) -> None: ...
+
+    monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
+    with aioresponses() as m:
+        m.post(
+            f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
+            payload={"status": 200, "result": {"token": "foo"}},
+            repeat=True,
+        )
+        mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
+        with pytest.raises(ApiError) as excinfo:
+            await mgr.initial_exchange()
+    assert "Malformed JWT response" in str(excinfo.value)
+
+
 @pytest.fixture
 async def aiohttp_client_session():
-    import aiohttp
-
     async with aiohttp.ClientSession() as s:
         yield s

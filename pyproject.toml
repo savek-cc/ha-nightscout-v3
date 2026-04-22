@@ -17,7 +17,7 @@ packages = ["custom_components.nightscout_v3", "custom_components.nightscout_v3.
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "-ra --cov=custom_components.nightscout_v3 --cov-report=term-missing --cov-fail-under=90"
+addopts = "-ra --cov=custom_components.nightscout_v3 --cov-report=term-missing --cov-fail-under=95"
 
 [tool.coverage.run]
 source = ["custom_components.nightscout_v3"]
