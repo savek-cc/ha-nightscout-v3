@@ -81,7 +81,12 @@ class HistoryStore:
         return int(row["version"]) if row else 0
 
     async def insert_batch(self, entries: list[dict[str, Any]]) -> int:
-        """Insert entries (ignoring duplicates) and return the number newly added."""
+        """Insert SGV entries (ignoring duplicates) and return the number newly added.
+
+        Nightscout's `entries` collection is mixed: sgv, mbg, cal, smb, etc.
+        Only sgv rows carry a `sgv` reading; everything else is skipped here
+        since the stats pipeline downstream is CGM-only.
+        """
         if not entries:
             return 0
         rows = [
@@ -95,7 +100,10 @@ class HistoryStore:
                 int(e.get("srvModified", e["date"])),
             )
             for e in entries
+            if e.get("sgv") is not None and e.get("identifier")
         ]
+        if not rows:
+            return 0
         async with self._db.execute("SELECT COUNT(*) AS n FROM entries") as cur:
             before = (await cur.fetchone())["n"]
         await self._db.executemany(
