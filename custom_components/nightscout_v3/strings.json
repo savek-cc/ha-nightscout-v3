@@ -70,5 +70,60 @@
       }
     }
   },
-  "entity": {}
+  "entity": {
+    "sensor": {
+      "bg_current": { "name": "BG current" },
+      "bg_delta": { "name": "BG delta" },
+      "bg_direction": { "name": "BG direction" },
+      "bg_trend_arrow": { "name": "BG trend arrow" },
+      "bg_stale_minutes": { "name": "BG stale minutes" },
+      "pump_reservoir": { "name": "Pump reservoir" },
+      "pump_battery": { "name": "Pump battery" },
+      "pump_status": { "name": "Pump status" },
+      "pump_active_profile": { "name": "Active profile" },
+      "pump_base_basal": { "name": "Base basal" },
+      "pump_temp_basal_rate": { "name": "Temp basal rate" },
+      "pump_temp_basal_remaining": { "name": "Temp basal remaining" },
+      "pump_last_bolus_amount": { "name": "Last bolus amount" },
+      "pump_last_bolus_time": { "name": "Last bolus time" },
+      "loop_mode": { "name": "Loop mode" },
+      "loop_iob": { "name": "Loop IOB" },
+      "loop_basaliob": { "name": "Loop basal IOB" },
+      "loop_activity": { "name": "Loop activity" },
+      "loop_cob": { "name": "Loop COB" },
+      "loop_eventual_bg": { "name": "Loop eventual BG" },
+      "loop_target_bg": { "name": "Loop target BG" },
+      "loop_sensitivity_ratio": { "name": "Loop sensitivity ratio" },
+      "loop_reason": { "name": "Loop reason" },
+      "loop_last_enacted_age_minutes": { "name": "Loop last enacted (min ago)" },
+      "loop_pred_bgs": { "name": "Loop predicted BGs" },
+      "care_sage_days": { "name": "Sensor age (days)" },
+      "care_cage_days": { "name": "Cannula age (days)" },
+      "care_iage_days": { "name": "Insulin age (days)" },
+      "care_bage_days": { "name": "Pump battery age (days)" },
+      "care_last_meal_carbs": { "name": "Last meal carbs" },
+      "care_carbs_today": { "name": "Carbs today" },
+      "care_last_note": { "name": "Last note" },
+      "uploader_battery": { "name": "Uploader battery" },
+      "stat_mean": { "name": "Mean BG ({window}d)" },
+      "stat_sd": { "name": "SD ({window}d)" },
+      "stat_cv": { "name": "CV ({window}d)" },
+      "stat_gmi": { "name": "GMI ({window}d)" },
+      "stat_hba1c": { "name": "HbA1c ({window}d)" },
+      "stat_tir_in_range": { "name": "TIR in range ({window}d)" },
+      "stat_tir_low": { "name": "TIR low ({window}d)" },
+      "stat_tir_very_low": { "name": "TIR very low ({window}d)" },
+      "stat_tir_high": { "name": "TIR high ({window}d)" },
+      "stat_tir_very_high": { "name": "TIR very high ({window}d)" },
+      "stat_lbgi": { "name": "LBGI ({window}d)" },
+      "stat_hbgi": { "name": "HBGI ({window}d)" },
+      "stat_hourly_profile": { "name": "Hourly profile ({window}d)" },
+      "stat_agp": { "name": "AGP percentiles ({window}d)" }
+    },
+    "binary_sensor": {
+      "loop_active": { "name": "Loop active" },
+      "uploader_online": { "name": "Uploader online" },
+      "uploader_charging": { "name": "Uploader charging" }
+    }
+  }
 }
