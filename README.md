@@ -131,38 +131,55 @@ for the current state.
 
 ## Server-side tuning
 
-On Nightscout instances with years of treatments history, the capability
-probe issues four `eventType$eq=X` queries against `/api/v3/treatments`,
-sorted by `created_at`. The default Nightscout schema ships
-`{eventType:1, duration:1, created_at:1}` — the `duration` field in the
-middle prevents Mongo from serving the sort from the index, forcing an
-in-memory `SORT` stage that pulls matching documents into the WiredTiger
-cache. On a small-RAM host this can swing memory usage by several
-hundred MB per probe.
+On Nightscout instances with long history, this integration's capability
+probe and regular polling issue API v3 search queries against
+`treatments`, `entries`, and `devicestatus`. Nightscout's v3 layer
+(`lib/api3/generic/search/input.js#parseSort`) unconditionally appends
+three tiebreaker fields (`identifier`, `created_at`, `date`) to **every**
+sort — so the Mongo sort is always three-field, and none of the default
+indexes cover that shape. The result: COLLSCAN + in-memory SORT on every
+v3 search, including simple "latest 1" lookups.
 
-One-shot fix: add a compound index matching the query shape.
+Measured against a real instance (Nightscout 15.0.6):
+
+| Collection   | Docs  | Plan before                              | Time    |
+| ------------ | ----- | ---------------------------------------- | ------- |
+| treatments   | 574k  | `IXSCAN(eventType_1)` + SORT, 214 keys  | ~2 s    |
+| entries      | 961k  | **COLLSCAN** + SORT, 961k docs examined | ~5.8 s  |
+| devicestatus | 1.9M  | **COLLSCAN** + SORT, 1.9M docs examined | ~28 s   |
+
+The devicestatus case alone can OOM-kill Mongo on small-RAM hosts.
+
+One-shot fix: add three compound indexes matching the real sort shapes.
 
 ```bash
 docker exec <mongo-container> mongosh <db> --eval '
   db.treatments.createIndex(
-    {eventType: 1, created_at: -1},
-    {name: "eventType_1_created_at_-1", background: true}
-  )'
+    {eventType: 1, created_at: -1, identifier: -1, date: -1},
+    {name: "v3_treatments_by_eventtype", background: true});
+  db.entries.createIndex(
+    {date: -1, identifier: -1, created_at: -1},
+    {name: "v3_entries_sort", background: true});
+  db.devicestatus.createIndex(
+    {created_at: -1, identifier: -1, date: -1},
+    {name: "v3_devicestatus_sort", background: true});
+'
 ```
 
-Before: `totalKeysExamined: 214`, SORT stage in memory.
-After:  `totalKeysExamined: 1`, `IXSCAN → FETCH → LIMIT`, no sort.
-
-Index build is cheap (a few seconds on ~500k treatments) and the index
-itself stays small.
+After the indexes: each query drops to `IXSCAN → FETCH → LIMIT`,
+`totalKeysExamined: 1`, sub-millisecond execution. Index builds take a
+few seconds even on multi-million-doc collections, and the indexes
+themselves are compact.
 
 Upstream tracking:
 [nightscout/cgm-remote-monitor#8477](https://github.com/nightscout/cgm-remote-monitor/issues/8477)
-— proposes shipping this index as part of the default schema.
+(issue) and
+[#8478](https://github.com/nightscout/cgm-remote-monitor/pull/8478)
+(PR) — both cover all three collections.
 Related: PR
 [#5463](https://github.com/nightscout/cgm-remote-monitor/pull/5463)
-introduced the current `{eventType, duration, created_at}` index;
-issue
+introduced the existing `{eventType, duration, created_at}` index (the
+one predating v3's parseSort tiebreakers); issue
 [#7898](https://github.com/nightscout/cgm-remote-monitor/issues/7898)
 reports the correctness symptom (sort direction ignored on
 `/api/v3/treatments?eventType$eq=…&sort$desc=created_at`) that the
@@ -179,8 +196,8 @@ missing compound index likely causes.
 - **Dashboard cards render blank** — HACS frontend plugins missing; see
   `docs/dashboard-setup.md`.
 - **Config flow "Connecting…" hangs 30+ seconds / server memory spikes on
-  Add Integration** — missing `{eventType, created_at}` compound index on
-  `treatments`; see **Server-side tuning** above.
+  Add Integration** — missing compound indexes on `treatments`, `entries`,
+  and `devicestatus`; see **Server-side tuning** above.
 
 ## Links
 
