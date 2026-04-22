@@ -41,18 +41,16 @@ _PUMP_BATTERY_CHANGE = "Pump Battery Change"
 
 async def probe_capabilities(client: NightscoutV3Client) -> ServerCapabilities:
     """Probe the server in parallel; raise if /entries is empty (hard requirement)."""
-    status_task = asyncio.create_task(client.get_status())
-    devicestatus_task = asyncio.create_task(client.get_devicestatus(limit=1))
-    entries_task = asyncio.create_task(client.get_entries(limit=1))
-    sensor_task = asyncio.create_task(client.get_treatments(event_type=_SENSOR_CHANGE, limit=1))
-    site_task = asyncio.create_task(client.get_treatments(event_type=_SITE_CHANGE, limit=1))
-    insulin_task = asyncio.create_task(client.get_treatments(event_type=_INSULIN_CHANGE, limit=1))
-    battery_task = asyncio.create_task(
-        client.get_treatments(event_type=_PUMP_BATTERY_CHANGE, limit=1)
-    )
-
+    # asyncio.gather schedules and cancels coroutines atomically — preferred
+    # over pre-creating tasks, which can leak on partial failure.
     status, devicestatus, entries, sensor, site, insulin, battery = await asyncio.gather(
-        status_task, devicestatus_task, entries_task, sensor_task, site_task, insulin_task, battery_task
+        client.get_status(),
+        client.get_devicestatus(limit=1),
+        client.get_entries(limit=1),
+        client.get_treatments(event_type=_SENSOR_CHANGE, limit=1),
+        client.get_treatments(event_type=_SITE_CHANGE, limit=1),
+        client.get_treatments(event_type=_INSULIN_CHANGE, limit=1),
+        client.get_treatments(event_type=_PUMP_BATTERY_CHANGE, limit=1),
     )
 
     if not entries:

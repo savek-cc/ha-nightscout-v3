@@ -87,11 +87,11 @@ class JwtManager:
         except (aiohttp.ClientError, TimeoutError) as exc:
             raise ApiError(f"Network error during JWT exchange: {exc}") from exc
 
-        result = body.get("result") or {}
+        result = body.get("result", {})
         token = result.get("token")
         exp = result.get("exp")
         iat = result.get("iat")
-        if not (token and exp and iat):
+        if token is None or exp is None or iat is None:
             raise ApiError(f"Malformed JWT response: {body}")
         self._state = JwtState(token=token, iat=int(iat), exp=int(exp))
         return self._state
