@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from custom_components.nightscout_v3.api.capabilities import ServerCapabilities, probe_capabilities
+from custom_components.nightscout_v3.api.exceptions import ApiError
 from tests.conftest import load_fixture
 
 
@@ -42,7 +43,7 @@ async def test_probe_detects_minimal_server(client: AsyncMock) -> None:
 
 async def test_probe_raises_if_no_entries(client: AsyncMock) -> None:
     client.get_entries.return_value = []
-    with pytest.raises(RuntimeError, match="entries"):
+    with pytest.raises(ApiError, match="entries"):
         await probe_capabilities(client)
 
 

@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass
 from typing import Any, Literal
 
 from .client import NightscoutV3Client
+from .exceptions import ApiError
 
 
 @dataclass(slots=True, frozen=True)
@@ -55,7 +56,7 @@ async def probe_capabilities(client: NightscoutV3Client) -> ServerCapabilities:
     )
 
     if not entries:
-        raise RuntimeError("Server exposes no entries; cannot proceed")
+        raise ApiError("Server exposes no entries; cannot proceed")
 
     units_raw = (status.get("settings") or {}).get("units", "mg/dl")
     units: Literal["mg/dl", "mmol/L"] = "mmol/L" if units_raw == "mmol/L" else "mg/dl"
