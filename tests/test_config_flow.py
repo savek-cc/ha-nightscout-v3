@@ -157,3 +157,58 @@ async def test_options_rediscover_updates_capabilities(hass, valid_caps) -> None
             result["flow_id"], {"next_step_id": "rediscover"}
         )
     assert result["type"].name == "CREATE_ENTRY"
+
+
+# --- reauth ---
+
+
+async def test_reauth_happy_path(hass, valid_caps) -> None:
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id="rauid",
+        data={"url": "https://ns.example", "access_token": "old",
+              "capabilities": valid_caps.to_dict(), "capabilities_probed_at": 0},
+        options={},
+    )
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reauth_flow(hass)
+    assert result["type"].name == "FORM"
+    assert result["step_id"] == "reauth_confirm"
+
+    with patch(
+        "custom_components.nightscout_v3.config_flow.JwtManager.initial_exchange",
+        new=AsyncMock(return_value=MagicMock(token="jwt", exp=9999999999, iat=0)),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"access_token": "new"}
+        )
+    assert result["type"].name == "ABORT"
+    assert result["reason"] == "reauth_successful"
+    assert entry.data["access_token"] == "new"
+
+
+@pytest.mark.parametrize(
+    ("exc", "error_key"),
+    [("auth", "invalid_auth"), ("api", "cannot_connect"), ("unknown", "unknown")],
+)
+async def test_reauth_errors(hass, valid_caps, exc, error_key) -> None:
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    from custom_components.nightscout_v3.api.exceptions import ApiError, AuthError
+
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id=f"rauid-{exc}",
+        data={"url": "https://ns.example", "access_token": "old",
+              "capabilities": valid_caps.to_dict(), "capabilities_probed_at": 0},
+        options={},
+    )
+    entry.add_to_hass(hass)
+    result = await entry.start_reauth_flow(hass)
+
+    exc_map = {"auth": AuthError("401"), "api": ApiError("x"), "unknown": Exception("?")}
+    with patch("custom_components.nightscout_v3.config_flow.JwtManager.initial_exchange",
+               new=AsyncMock(side_effect=exc_map[exc])):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"access_token": "new"}
+        )
+    assert result["errors"] == {"base": error_key}
