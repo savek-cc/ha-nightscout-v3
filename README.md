@@ -129,6 +129,42 @@ for the current state.
 - `scripts/capture_fixtures.py` and `scripts/smoke_test.py` refuse to run
   against ProdInstance via a hard-coded hostname block.
 
+## Server-side tuning
+
+On Nightscout instances with years of treatments history, the capability
+probe issues four `eventType$eq=X` queries against `/api/v3/treatments`,
+sorted by `created_at`. The default Nightscout schema ships
+`{eventType:1, duration:1, created_at:1}` — the `duration` field in the
+middle prevents Mongo from serving the sort from the index, forcing an
+in-memory `SORT` stage that pulls matching documents into the WiredTiger
+cache. On a small-RAM host this can swing memory usage by several
+hundred MB per probe.
+
+One-shot fix: add a compound index matching the query shape.
+
+```bash
+docker exec <mongo-container> mongosh <db> --eval '
+  db.treatments.createIndex(
+    {eventType: 1, created_at: -1},
+    {name: "eventType_1_created_at_-1", background: true}
+  )'
+```
+
+Before: `totalKeysExamined: 214`, SORT stage in memory.
+After:  `totalKeysExamined: 1`, `IXSCAN → FETCH → LIMIT`, no sort.
+
+Index build is cheap (a few seconds on ~500k treatments) and the index
+itself stays small.
+
+Upstream: the default Nightscout schema (PR
+[#5463](https://github.com/nightscout/cgm-remote-monitor/pull/5463))
+declares `{eventType:1, duration:1, created_at:1}` — adding
+`{eventType:1, created_at:-1}` would fix this for every deployment.
+Issue [#7898](https://github.com/nightscout/cgm-remote-monitor/issues/7898)
+reports the user-visible symptom (sort direction ignored on
+`/api/v3/treatments?eventType$eq=…&sort$desc=created_at`); the missing
+compound index is the likely root cause.
+
 ## Troubleshooting
 
 - **JWT refresh loop in logs** — your token was rotated; use the reauth
@@ -139,6 +175,9 @@ for the current state.
   Bolus or Carbs entries in the last 24 h; not an integration bug.
 - **Dashboard cards render blank** — HACS frontend plugins missing; see
   `docs/dashboard-setup.md`.
+- **Config flow "Connecting…" hangs 30+ seconds / server memory spikes on
+  Add Integration** — missing `{eventType, created_at}` compound index on
+  `treatments`; see **Server-side tuning** above.
 
 ## Links
 
