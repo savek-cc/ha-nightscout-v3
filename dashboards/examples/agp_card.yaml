@@ -1,0 +1,35 @@
+# The stat_agp_14d sensor exposes per-hour percentiles as attributes
+# (p05_by_hour / p25_by_hour / p50_by_hour / p75_by_hour / p95_by_hour, each a
+# 24-entry list). It is disabled by default; enable it in HA's entity registry
+# first. For a ribbon-style AGP, apexcharts-card can plot each attribute as a
+# separate series.
+type: custom:apexcharts-card
+header:
+  show: true
+  title: AGP – stündliche Perzentile (14 d)
+graph_span: 14d
+series:
+  - entity: sensor.nightscout_v3_stat_agp_14d
+    attribute: p05_by_hour
+    name: p05
+    stroke_width: 1
+    opacity: 0.4
+  - entity: sensor.nightscout_v3_stat_agp_14d
+    attribute: p25_by_hour
+    name: p25
+    stroke_width: 1
+    opacity: 0.6
+  - entity: sensor.nightscout_v3_stat_agp_14d
+    attribute: p50_by_hour
+    name: median
+    stroke_width: 2
+  - entity: sensor.nightscout_v3_stat_agp_14d
+    attribute: p75_by_hour
+    name: p75
+    stroke_width: 1
+    opacity: 0.6
+  - entity: sensor.nightscout_v3_stat_agp_14d
+    attribute: p95_by_hour
+    name: p95
+    stroke_width: 1
+    opacity: 0.4

@@ -1,0 +1,12 @@
+type: entities
+title: Loop
+entities:
+  - binary_sensor.nightscout_v3_loop_active
+  - sensor.nightscout_v3_loop_mode
+  - sensor.nightscout_v3_loop_eventual_bg
+  - sensor.nightscout_v3_loop_target_bg
+  - sensor.nightscout_v3_loop_iob
+  - sensor.nightscout_v3_loop_cob
+  - sensor.nightscout_v3_loop_sensitivity_ratio
+  - sensor.nightscout_v3_loop_last_enacted_age_minutes
+  - sensor.nightscout_v3_pump_reservoir

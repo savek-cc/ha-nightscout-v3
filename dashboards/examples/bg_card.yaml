@@ -1,0 +1,11 @@
+type: custom:mushroom-template-card
+primary: "{{ states('sensor.nightscout_v3_bg_current') }} mg/dL"
+secondary: >-
+  {{ states('sensor.nightscout_v3_bg_trend_arrow') }} ·
+  Δ {{ states('sensor.nightscout_v3_bg_delta') }} mg/dL
+icon: mdi:water
+icon_color: >-
+  {% set v = states('sensor.nightscout_v3_bg_current') | float(0) %}
+  {% if v < 70 %}red
+  {% elif v > 180 %}orange
+  {% else %}green{% endif %}
