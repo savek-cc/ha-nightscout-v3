@@ -132,6 +132,8 @@ class NightscoutConfigFlow(ConfigFlow, domain=DOMAIN):
 
             if not errors:
                 reauth_entry = self._get_reauth_entry()
+                await self.async_set_unique_id(reauth_entry.unique_id)
+                self._abort_if_unique_id_mismatch()
                 return self.async_update_reload_and_abort(
                     reauth_entry,
                     data={**reauth_entry.data, CONF_ACCESS_TOKEN: token},
