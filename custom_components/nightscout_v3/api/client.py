@@ -1,6 +1,7 @@
 """Nightscout v3 REST client."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -12,7 +13,8 @@ from .auth import JwtManager
 from .exceptions import ApiError, AuthError
 
 _LOGGER = logging.getLogger(__name__)
-_DEFAULT_TIMEOUT = aiohttp.ClientTimeout(total=30)
+_DEFAULT_TIMEOUT = aiohttp.ClientTimeout(total=30, sock_connect=10, sock_read=20)
+_HARD_TIMEOUT_SECONDS = 35
 
 
 def _ms_to_iso(ms: int) -> str:
@@ -128,17 +130,28 @@ class NightscoutV3Client:
 
     async def _raw_get(self, path: str, params: list[tuple[str, str]]) -> dict[str, Any]:
         jwt = await self._jwt_manager.get_valid_jwt()
-        headers = {"Authorization": f"Bearer {jwt}", "Accept": "application/json"}
+        headers = {
+            "Authorization": f"Bearer {jwt}",
+            "Accept": "application/json",
+            # Force a fresh TCP connection per request. aiohttp's shared-session
+            # keep-alive pool reused a half-closed connection between backfill
+            # batches and the second request hung in protocol.read() past the
+            # ClientTimeout. "Connection: close" disables reuse on both ends.
+            "Connection": "close",
+        }
         qs = "&".join(f"{k}={quote(v, safe='$')}" for k, v in params)
         url = f"{self._base_url}{path}" + (f"?{qs}" if qs else "")
         try:
-            async with self._session.get(url, headers=headers, timeout=_DEFAULT_TIMEOUT) as resp:
-                if resp.status == 401:
-                    raise AuthError(f"401 on {path}")
-                if resp.status >= 500:
-                    raise ApiError(f"{resp.status} on {path}", status=resp.status)
-                if resp.status != 200:
-                    raise ApiError(f"{resp.status} on {path}", status=resp.status)
-                return await resp.json()
+            async with asyncio.timeout(_HARD_TIMEOUT_SECONDS):
+                async with self._session.get(
+                    url, headers=headers, timeout=_DEFAULT_TIMEOUT,
+                ) as resp:
+                    if resp.status == 401:
+                        raise AuthError(f"401 on {path}")
+                    if resp.status >= 500:
+                        raise ApiError(f"{resp.status} on {path}", status=resp.status)
+                    if resp.status != 200:
+                        raise ApiError(f"{resp.status} on {path}", status=resp.status)
+                    return await resp.json()
         except (aiohttp.ClientError, TimeoutError) as exc:
             raise ApiError(f"Network error on {path}: {exc}") from exc
