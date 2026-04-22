@@ -126,6 +126,8 @@ async def test_backfill_paginates_until_short_batch(
     assert len(calls) == 2, "second batch had <1000 docs, loop must stop after it"
     assert calls[0].kwargs["before_date"] is None
     assert calls[1].kwargs["before_date"] == batch1_min
+    assert all("since_date" not in c.kwargs for c in calls), \
+        "date$gte on same request as date$lt gets the $lt silently dropped by v3"
     assert all("last_modified" not in c.kwargs for c in calls), \
         "srvModified filter must not be sent on initial sync"
     state = await store.get_sync_state("entries")
@@ -133,6 +135,30 @@ async def test_backfill_paginates_until_short_batch(
     assert state.last_modified == 42
     assert state.oldest_date == batch2_min
     assert state.newest_date == batch1[0]["date"]
+
+
+async def test_backfill_bails_out_when_server_ignores_before_date(
+    hass: HomeAssistant, mock_client, store, entry
+) -> None:
+    """If the server returns the same newest batch every call, abort fast.
+
+    Regression guard: hitting an endpoint that silently drops `date$lt`
+    used to produce an endless loop hammering the server.
+    """
+    import time as _time
+    now_ms = int(_time.time() * 1000)
+    step = 300_000
+    same_batch = [
+        {"identifier": f"x{i}", "date": now_ms - i * step, "sgv": 140, "type": "sgv"}
+        for i in range(1000)
+    ]
+    mock_client.get_entries.return_value = same_batch
+
+    coord = NightscoutCoordinator(hass, mock_client, _caps(), store, entry)
+    await coord._backfill_entries(entries_lm=42)
+
+    # Iter 1 accepts the batch, iter 2 detects no progress and stops.
+    assert mock_client.get_entries.call_count == 2
 
 
 async def test_incremental_entries_extends_window(

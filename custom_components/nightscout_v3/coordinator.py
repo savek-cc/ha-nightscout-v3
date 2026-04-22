@@ -178,28 +178,55 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _backfill_entries(self, entries_lm: int) -> None:
         """Initial sync: paginate backwards until we cover STATS_HISTORY_MAX_DAYS.
 
-        srvModified is not used as a filter here — it's absent on legacy
-        entries (anything not written through v3), so a $gt=0 filter
-        rejects the entire history.
+        Two v3-API quirks shaped this loop:
+
+        1. `srvModified` is absent on legacy (pre-v3-write) entries, so a
+           `srvModified$gt=0` filter rejects the entire history. Not sent here.
+
+        2. v3's parseFilter builds `{date: {$lt}, date: {$gte}}` as a plain
+           object — the second key silently overwrites the first. Sending
+           both `date$lt` *and* `date$gte` on the same request yields only
+           the `$gte` half; the server returns the newest 1000 docs every
+           time and the loop runs away. So the 90d cutoff is enforced
+           client-side, not via `since_date` on the wire.
+
+        A hard iteration cap and a "before_date is not advancing" guard
+        are belt-and-braces against future server changes that could
+        re-introduce a runaway loop.
         """
         cutoff = _day_ago_ms(STATS_HISTORY_MAX_DAYS)
         before: int | None = None
         overall_oldest: int | None = None
         overall_newest: int | None = None
-        while True:
-            batch = await self._client.get_entries(
-                limit=1000, since_date=cutoff, before_date=before,
-            )
+        max_iters = 200
+        for iter_n in range(1, max_iters + 1):
+            batch = await self._client.get_entries(limit=1000, before_date=before)
             if not batch:
                 break
-            await self._store.insert_batch(batch)
-            dates = [int(e["date"]) for e in batch]
-            batch_min, batch_max = min(dates), max(dates)
-            overall_oldest = batch_min if overall_oldest is None else min(overall_oldest, batch_min)
-            overall_newest = batch_max if overall_newest is None else max(overall_newest, batch_max)
-            if len(batch) < 1000 or batch_min <= cutoff:
+            server_min = min(int(e["date"]) for e in batch)
+            in_window = [e for e in batch if int(e["date"]) >= cutoff]
+            if in_window:
+                await self._store.insert_batch(in_window)
+                dates = [int(e["date"]) for e in in_window]
+                b_min, b_max = min(dates), max(dates)
+                overall_oldest = b_min if overall_oldest is None else min(overall_oldest, b_min)
+                overall_newest = b_max if overall_newest is None else max(overall_newest, b_max)
+            if len(batch) < 1000 or server_min <= cutoff:
                 break
-            before = batch_min
+            if before is not None and server_min >= before:
+                _LOGGER.error(
+                    "nightscout_v3 backfill: server's before_date filter not "
+                    "advancing (got min=%d, expected <%d). Stopping to prevent "
+                    "runaway loop.",
+                    server_min, before,
+                )
+                break
+            before = server_min
+        else:
+            _LOGGER.warning(
+                "nightscout_v3 backfill reached max_iters=%d without short batch; "
+                "stopping anyway.", max_iters,
+            )
         if overall_oldest is not None:
             await self._store.update_sync_state(
                 "entries",
