@@ -232,38 +232,6 @@ async def test_malformed_jwt_error_does_not_leak_token_body(
     assert cause is None or leaked_jwt not in str(cause)
 
 
-async def test_initial_exchange_falls_back_to_v1_on_v2_404(
-    aiohttp_client_session, freezer
-) -> None:
-    """Nightscout installs without the v2 authorization route expose the JWT
-    on /api/v1/status.json?token=...; a 404 on v2 must trigger that fallback.
-    """
-    freezer.move_to("2026-04-21T00:00:00Z")
-    with aioresponses() as m:
-        m.post(
-            f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
-            status=404,
-        )
-        m.get(
-            f"{BASE_URL}/api/v1/status.json?token={TOKEN}",
-            payload={
-                "status": "ok",
-                "name": "nightscout",
-                "authorized": {
-                    "token": "jwt-from-v1",
-                    "sub": "homeassistant",
-                    "iat": 1_775_000_000,
-                    "exp": 1_775_028_800,
-                },
-            },
-        )
-        mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
-        state = await mgr.initial_exchange()
-    assert state.token == "jwt-from-v1"
-    assert state.iat == 1_775_000_000
-    assert state.exp == 1_775_028_800
-
-
 @pytest.fixture
 async def aiohttp_client_session():
     async with aiohttp.ClientSession() as s:

@@ -60,20 +60,11 @@ class JwtManager:
             return await self._exchange_with_retry()
 
     async def _exchange_with_retry(self) -> JwtState:
-        v2_url = f"{self._base_url}/api/v2/authorization/request/{self._access_token}"
-        v1_url = f"{self._base_url}/api/v1/status.json?token={self._access_token}"
+        url = f"{self._base_url}/api/v2/authorization/request/{self._access_token}"
         last_exc: Exception | None = None
         for attempt in range(MAX_REFRESH_ATTEMPTS):
             try:
-                try:
-                    return await self._exchange_v2(v2_url)
-                except ApiError as exc:
-                    if exc.status != 404:
-                        raise
-                    _LOGGER.debug(
-                        "v2 authorization endpoint missing; falling back to v1 status.json"
-                    )
-                    return await self._exchange_v1(v1_url)
+                return await self._exchange_once(url)
             except AuthError:
                 raise
             except (ApiError, aiohttp.ClientError, TimeoutError) as exc:
@@ -88,20 +79,10 @@ class JwtManager:
             f"JWT exchange gave up after {MAX_REFRESH_ATTEMPTS} attempts: {last_exc}"
         )
 
-    async def _exchange_v2(self, url: str) -> JwtState:
-        body = await self._request(url, method="POST")
-        result = body.get("result", {})
-        return self._state_from(result)
-
-    async def _exchange_v1(self, url: str) -> JwtState:
-        body = await self._request(url, method="GET")
-        authorized = body.get("authorized") or {}
-        return self._state_from(authorized)
-
-    async def _request(self, url: str, *, method: str) -> dict:
+    async def _exchange_once(self, url: str) -> JwtState:
         try:
-            async with self._session.request(
-                method, url, timeout=aiohttp.ClientTimeout(total=30)
+            async with self._session.post(
+                url, timeout=aiohttp.ClientTimeout(total=30)
             ) as resp:
                 if resp.status == 401:
                     raise AuthError("Access token rejected")
@@ -109,7 +90,7 @@ class JwtManager:
                     raise ApiError(f"Server error {resp.status}", status=resp.status)
                 if resp.status != 200:
                     raise ApiError(f"Unexpected status {resp.status}", status=resp.status)
-                return await resp.json()
+                body = await resp.json()
         except (aiohttp.ClientError, TimeoutError) as exc:
             # Avoid `{exc}` interpolation: the exchange URL embeds the raw
             # access token, and some aiohttp error reprs include that URL.
@@ -117,10 +98,10 @@ class JwtManager:
                 f"Network error during JWT exchange: {type(exc).__name__}"
             ) from exc
 
-    def _state_from(self, payload: dict) -> JwtState:
-        token = payload.get("token")
-        exp = payload.get("exp")
-        iat = payload.get("iat")
+        result = body.get("result", {})
+        token = result.get("token")
+        exp = result.get("exp")
+        iat = result.get("iat")
         if token is None or exp is None or iat is None:
             missing = [
                 name for name, value in (("token", token), ("exp", exp), ("iat", iat))
