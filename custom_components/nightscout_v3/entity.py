@@ -25,6 +25,8 @@ class NightscoutEntity(CoordinatorEntity["NightscoutCoordinator"]):
         entry_id = coordinator.config_entry.entry_id
         self._attr_unique_id = f"{entry_id}_{feature.key}"
         self._attr_translation_key = feature.translation_key
+        if feature.translation_placeholders:
+            self._attr_translation_placeholders = dict(feature.translation_placeholders)
         self._attr_icon = feature.icon
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},

@@ -3,14 +3,14 @@ rules:
   action-setup:
     status: exempt
     comment: The integration does not register services in v1 (careportal writes are v2 roadmap).
-  appropriate-polling: todo
+  appropriate-polling: done
   brands:
     status: todo
     comment: PR to home-assistant/brands required before HACS listing.
-  common-modules: todo
-  config-flow-test-coverage: todo
-  config-flow: todo
-  dependency-transparency: todo
+  common-modules: done
+  config-flow-test-coverage: done
+  config-flow: done
+  dependency-transparency: done
   docs-actions:
     status: exempt
     comment: The integration does not register services in v1.
@@ -22,22 +22,22 @@ rules:
     comment: >
       Entities do not subscribe to push events. All data is pulled through the
       DataUpdateCoordinator.
-  entity-unique-id: todo
-  has-entity-name: todo
-  runtime-data: todo
-  test-before-configure: todo
-  test-before-setup: todo
-  unique-config-entry: todo
+  entity-unique-id: done
+  has-entity-name: done
+  runtime-data: done
+  test-before-configure: done
+  test-before-setup: done
+  unique-config-entry: done
   # Silver
   action-exceptions:
     status: exempt
     comment: The integration does not register services in v1.
-  config-entry-unloading: todo
+  config-entry-unloading: done
   docs-configuration-parameters: todo
   docs-installation-parameters: todo
-  entity-unavailable: todo
-  integration-owner: todo
-  log-when-unavailable: todo
-  parallel-updates: todo
-  reauthentication-flow: todo
+  entity-unavailable: done
+  integration-owner: done
+  log-when-unavailable: done
+  parallel-updates: done
+  reauthentication-flow: done
   test-coverage: todo

@@ -2239,6 +2239,10 @@ class FeatureDef:
     state_class: str | None = None
     unit: str | None = None
     icon: str | None = None
+    # Phase-3-polish (Review 2026-04-22): stats entities set
+    # translation_placeholders={"window": str(w)} so each window's sensor
+    # renders its own translated name without collisions.
+    translation_placeholders: dict[str, str] | None = None
 
 
 def _always(_c: ServerCapabilities) -> bool:

@@ -188,6 +188,84 @@ async def test_reauth_happy_path(hass, valid_caps) -> None:
     assert entry.data["access_token"] == "new"
 
 
+async def test_options_thresholds_happy_path(hass, valid_caps) -> None:
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id="uid-thr",
+        data={"url": "https://ns.example", "access_token": "t",
+              "capabilities": valid_caps.to_dict(), "capabilities_probed_at": 0},
+        options={"enabled_features": {}, "stats_windows": [14]},
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "thresholds"}
+    )
+    assert result["type"].name == "FORM"
+    assert result["step_id"] == "thresholds"
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            "tir_low_threshold_mgdl": 72,
+            "tir_high_threshold_mgdl": 180,
+            "tir_very_low_threshold_mgdl": 54,
+            "tir_very_high_threshold_mgdl": 250,
+        },
+    )
+    assert result["type"].name == "CREATE_ENTRY"
+    assert result["data"]["tir_low_threshold_mgdl"] == 72
+
+
+async def test_options_polling_happy_path(hass, valid_caps) -> None:
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id="uid-pol",
+        data={"url": "https://ns.example", "access_token": "t",
+              "capabilities": valid_caps.to_dict(), "capabilities_probed_at": 0},
+        options={"enabled_features": {}, "stats_windows": [14]},
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "polling"}
+    )
+    assert result["type"].name == "FORM"
+    assert result["step_id"] == "polling"
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            "poll_fast_seconds": 60,
+            "poll_change_detect_minutes": 10,
+            "poll_stats_minutes": 90,
+        },
+    )
+    assert result["type"].name == "CREATE_ENTRY"
+    assert result["data"]["poll_fast_seconds"] == 60
+
+
+async def test_options_rediscover_aborts_on_auth_error(hass, valid_caps) -> None:
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    from custom_components.nightscout_v3.api.exceptions import AuthError
+
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id="uid-redisc-auth",
+        data={"url": "https://ns.example", "access_token": "t",
+              "capabilities": valid_caps.to_dict(), "capabilities_probed_at": 0},
+        options={"enabled_features": {}, "stats_windows": [14]},
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    with patch(
+        "custom_components.nightscout_v3.config_flow.JwtManager.initial_exchange",
+        new=AsyncMock(side_effect=AuthError("401")),
+    ):
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], {"next_step_id": "rediscover"}
+        )
+    assert result["type"].name == "ABORT"
+    assert result["reason"] == "cannot_connect"
+
+
 @pytest.mark.parametrize(
     ("exc", "error_key"),
     [("auth", "invalid_auth"), ("api", "cannot_connect"), ("unknown", "unknown")],

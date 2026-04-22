@@ -6,6 +6,7 @@ from custom_components.nightscout_v3.feature_registry import (
     FEATURE_REGISTRY,
     Category,
     features_for_capabilities,
+    stats_feature_defs,
 )
 
 
@@ -62,3 +63,14 @@ def test_minimal_capabilities_excludes_pump_and_loop() -> None:
     assert "bg_current" in keys
     assert "loop_iob" not in keys
     assert "pump_reservoir" not in keys
+
+
+def test_stats_features_populate_translation_placeholders() -> None:
+    defs = stats_feature_defs(14)
+    for f in defs:
+        assert f.translation_placeholders == {"window": "14"}, f.key
+
+
+def test_non_stats_features_have_no_translation_placeholders() -> None:
+    for f in FEATURE_REGISTRY:
+        assert f.translation_placeholders is None, f.key

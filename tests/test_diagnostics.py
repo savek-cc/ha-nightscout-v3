@@ -1,7 +1,8 @@
 """Diagnostics redaction tests."""
 from __future__ import annotations
 
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -10,6 +11,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.nightscout_v3.api.capabilities import ServerCapabilities
 from custom_components.nightscout_v3.const import DOMAIN
 from custom_components.nightscout_v3.diagnostics import (
+    _collect_runtime,
     async_get_config_entry_diagnostics,
 )
 
@@ -45,3 +47,50 @@ async def test_diagnostics_redacts_url_and_token(hass: HomeAssistant, caps) -> N
     assert diag["entry"]["data"]["url"] == "**REDACTED**"
     assert diag["entry"]["data"]["access_token"] == "**REDACTED**"
     assert diag["runtime"]["coordinator"]["tick"] == 5
+
+
+def test_collect_runtime_no_runtime_data() -> None:
+    entry = MagicMock()
+    entry.runtime_data = None
+    assert _collect_runtime(entry) == {}
+
+
+def test_collect_runtime_full_snapshot(caps) -> None:
+    jwt_state = SimpleNamespace(iat=100, exp=10_000_000_000)
+    jwt_manager = SimpleNamespace(state=jwt_state)
+    coordinator = SimpleNamespace(
+        last_update_success=True,
+        last_tick_summary={"tick": 42, "entries_age_s": 60},
+        data={"bg": {"current_sgv": 120}},
+    )
+    runtime_data = SimpleNamespace(
+        coordinator=coordinator, jwt_manager=jwt_manager, capabilities=caps
+    )
+    entry = MagicMock()
+    entry.runtime_data = runtime_data
+
+    result = _collect_runtime(entry)
+
+    assert result["coordinator"]["last_update_success"] is True
+    assert result["coordinator"]["tick"] == 42
+    assert result["jwt"]["iat"] == 100
+    assert result["jwt"]["exp"] == 10_000_000_000
+    assert result["jwt"]["exp_in_seconds"] >= 0
+    assert result["capabilities"]["units"] == "mg/dl"
+    assert result["snapshot"]["bg"]["current_sgv"] == 120
+
+
+def test_collect_runtime_without_jwt_state(caps) -> None:
+    jwt_manager = SimpleNamespace(state=None)
+    coordinator = SimpleNamespace(
+        last_update_success=False, last_tick_summary={}, data=None
+    )
+    runtime_data = SimpleNamespace(
+        coordinator=coordinator, jwt_manager=jwt_manager, capabilities=caps
+    )
+    entry = MagicMock()
+    entry.runtime_data = runtime_data
+
+    result = _collect_runtime(entry)
+    assert result["jwt"] == {}
+    assert result["snapshot"] is None

@@ -64,3 +64,63 @@ def _caps():
         has_treatments_insulin_change=True, has_treatments_pump_battery_change=True,
         last_probed_at_ms=0,
     )
+
+
+async def test_setup_auth_error_triggers_reauth(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+    from custom_components.nightscout_v3.api.exceptions import AuthError
+    config_entry.add_to_hass(hass)
+    with (
+        patch("custom_components.nightscout_v3._PLATFORMS", []),
+        patch("custom_components.nightscout_v3.JwtManager.initial_exchange",
+              new=AsyncMock(side_effect=AuthError("401"))),
+    ):
+        assert not await hass.config_entries.async_setup(config_entry.entry_id)
+        await hass.async_block_till_done()
+    assert config_entry.state is ConfigEntryState.SETUP_ERROR
+
+
+async def test_setup_api_error_is_retry(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+    from custom_components.nightscout_v3.api.exceptions import ApiError
+    config_entry.add_to_hass(hass)
+    with (
+        patch("custom_components.nightscout_v3._PLATFORMS", []),
+        patch("custom_components.nightscout_v3.JwtManager.initial_exchange",
+              new=AsyncMock(side_effect=ApiError("503", status=503))),
+    ):
+        assert not await hass.config_entries.async_setup(config_entry.entry_id)
+        await hass.async_block_till_done()
+    assert config_entry.state is ConfigEntryState.SETUP_RETRY
+
+
+async def test_setup_capabilities_auth_error_triggers_reauth(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    from custom_components.nightscout_v3.api.exceptions import AuthError
+    config_entry.add_to_hass(hass)
+    with (
+        patch("custom_components.nightscout_v3._PLATFORMS", []),
+        patch("custom_components.nightscout_v3.JwtManager.initial_exchange",
+              new=AsyncMock(return_value=MagicMock(token="jwt", iat=0, exp=9999999999))),
+        patch("custom_components.nightscout_v3.probe_capabilities",
+              new=AsyncMock(side_effect=AuthError("forbidden"))),
+    ):
+        assert not await hass.config_entries.async_setup(config_entry.entry_id)
+        await hass.async_block_till_done()
+    assert config_entry.state is ConfigEntryState.SETUP_ERROR
+
+
+async def test_setup_capabilities_api_error_is_retry(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    from custom_components.nightscout_v3.api.exceptions import ApiError
+    config_entry.add_to_hass(hass)
+    with (
+        patch("custom_components.nightscout_v3._PLATFORMS", []),
+        patch("custom_components.nightscout_v3.JwtManager.initial_exchange",
+              new=AsyncMock(return_value=MagicMock(token="jwt", iat=0, exp=9999999999))),
+        patch("custom_components.nightscout_v3.probe_capabilities",
+              new=AsyncMock(side_effect=ApiError("nope", status=502))),
+    ):
+        assert not await hass.config_entries.async_setup(config_entry.entry_id)
+        await hass.async_block_till_done()
+    assert config_entry.state is ConfigEntryState.SETUP_RETRY

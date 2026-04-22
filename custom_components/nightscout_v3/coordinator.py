@@ -346,8 +346,12 @@ def _uploader_block(ds: dict[str, Any], now: datetime) -> dict[str, Any]:
         return {"battery_percent": None, "online": False, "charging": None}
     created = _parse_created(ds)
     age_min = int((now - created).total_seconds() / 60) if created else None
+    battery = ds.get("uploaderBattery")
+    if battery is None:
+        pump_battery = ((ds.get("pump") or {}).get("battery") or {}).get("percent")
+        battery = pump_battery
     return {
-        "battery_percent": ds.get("uploaderBattery") or (((ds.get("pump") or {}).get("battery") or {}).get("percent")),
+        "battery_percent": battery,
         "online": age_min is not None and age_min < 15,
         "charging": ds.get("isCharging"),
     }
