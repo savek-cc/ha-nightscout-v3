@@ -21,11 +21,10 @@ instances used by Type 1 diabetics.
 
 ## Requirements
 
-- Home Assistant ≥ 2026.1 (uses `runtime_data`, new quality-scale gates).
+- Home Assistant ≥ 2025.1 (uses `runtime_data` and the current quality-scale gates).
 - A Nightscout server with the v3 API enabled (Nightscout ≥ 15.0).
-- An access token with at least `*:*:read` plus `api:treatments:create` if you
-  plan to use Careportal in the future. For this v0.1.0 release, read-only
-  scopes are sufficient.
+- An access token with at least `*:*:read`. Write scopes
+  (`api:treatments:create` etc.) are not needed — v0.1.0 is read-only.
 
 ## Installation via HACS
 
@@ -50,7 +49,7 @@ Open **Configure** on the instance to walk through:
 1. **Features** — toggle individual sensors on/off. Disabled features are
    hidden from the UI.
 2. **Statistics windows** — the mandatory 14 d window plus any combination of
-   7 d / 30 d / 60 d / 90 d.
+   1 d / 7 d / 30 d / 90 d.
 3. **TIR thresholds** — override the default 70–180 mg/dL (and very-low /
    very-high buckets).
 4. **Polling intervals** — fast cycle (default 60 s), change-detect cycle
@@ -98,9 +97,12 @@ against). Each gets its own config entry, device, and entity prefix.
 
 ## Quality Scale
 
-Declared **Silver** (`custom_components/nightscout_v3/quality_scale.yaml`).
-See `scripts/verify_silver.py` for the static gate — every Silver rule is
-backed by test coverage or explicit exemption with comment.
+Targeting **Silver** (`custom_components/nightscout_v3/quality_scale.yaml`).
+`scripts/verify_silver.py` is the static gate that checks every Silver rule
+is `done` or explicitly `exempt` with a comment. The `docs-*` and `brands`
+rules depend on the upstream Home Assistant docs / brands repositories and
+flip to `done` once the corresponding PRs are merged; see `quality_scale.yaml`
+for the current state.
 
 ## Privacy & safety
 

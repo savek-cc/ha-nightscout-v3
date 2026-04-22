@@ -10,7 +10,7 @@
         },
         "data_description": {
           "url": "Base URL of your Nightscout server (e.g. https://my.nightscout.example).",
-          "access_token": "API token with at least `*:*:read` and `api:treatments:create` roles."
+          "access_token": "API token with at least the `*:*:read` role. Write scopes are not required — this integration is read-only in v0.1.0."
         }
       },
       "customize": {

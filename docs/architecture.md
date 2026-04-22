@@ -19,7 +19,7 @@ platform.
 | `sensor.py`, `binary_sensor.py`                    | Platform glue — iterate enabled features, instantiate `NightscoutSensor` / `NightscoutBinarySensor`.              |
 | `config_flow.py`                                   | User / reauth / options flows (5 options sub-steps).                                                              |
 | `diagnostics.py`                                   | `async_get_config_entry_diagnostics` with `async_redact_data` over `url`, `access_token`, `reason`, `notes`.      |
-| `models.py`                                        | `NightscoutRuntimeData` dataclass shipped via `ConfigEntry.runtime_data`.                                         |
+| `models.py`                                        | `NightscoutData` dataclass shipped via `ConfigEntry.runtime_data` (aliased as `NightscoutConfigEntry`).           |
 | `const.py`                                         | DOMAIN, option keys, defaults, ALLOWED_STATS_WINDOWS.                                                             |
 | `__init__.py`                                      | `async_setup_entry` / `async_unload_entry`; wires all of the above.                                               |
 
@@ -78,8 +78,10 @@ All three intervals are user-adjustable in Options → Polling.
    `/api/v2/authorization/request/{token}` (or v3 equivalent) → JWT, expiry.
 2. Coordinator setup: JWT stored in memory only (`runtime_data`), never on
    disk. Every client request adds `Authorization: Bearer <jwt>`.
-3. Background refresh: if JWT expires in < 30 min, `JwtManager.refresh()` is
-   called before the next request.
+3. Background refresh: if JWT expires in < 60 min
+   (`REFRESH_THRESHOLD_SECONDS = 3600` in `api/auth.py`), `JwtManager.refresh()`
+   is called before the next request. Independently, a periodic scheduler
+   (`JWT_BACKGROUND_REFRESH_HOURS = 7`) pre-refreshes in the background.
 4. On `401` / `403`: coordinator raises `ConfigEntryAuthFailed` → HA shows
    the reauth flow. User pastes a new token → fresh JWT.
 
@@ -127,7 +129,14 @@ exactly one commit touching:
 
 Stats entities are expanded programmatically via `stats_feature_defs(window)`
 because they're parameterized by window; the mandatory 14 d window is always
-present, others are added by the Options flow.
+present, others are added by the Options flow. All stats features share one
+`translation_key` per metric (e.g. `stat_gmi`) and inject the window into the
+rendered name via `translation_placeholders={"window": str(w)}` — the string
+catalog only defines each stat once, parameterized with `{window}`.
+
+Per window, `stats_feature_defs(w)` emits 14 `FeatureDef` entries (gmi,
+hba1c, tir_in_range, tir_low, tir_very_low, tir_high, tir_very_high, mean,
+sd, cv, lbgi, hbgi, hourly_profile, agp).
 
 ## Error mapping
 
@@ -136,22 +145,26 @@ present, others are added by the Options flow.
 | aiohttp `ClientConnectionError`     | `ApiError` (status=None)     | `UpdateFailed` (coordinator retry)    |
 | HTTP 5xx, malformed JSON            | `ApiError`                   | `UpdateFailed`                        |
 | HTTP 401 / 403 / invalid_token      | `AuthError`                  | `ConfigEntryAuthFailed` → reauth flow |
-| Capability probe fails on reconfig  | `ConfigEntryNotReady`        | retry with backoff                    |
+| Capability probe fails at setup     | `ConfigEntryNotReady`        | retry with backoff                    |
+| Capability probe fails in Options → Rediscover | — (caught)        | flow aborts with `cannot_connect`     |
 | Statistics empty window             | `_empty_payload()` (no raise) | zeroed sensors, `available = True`    |
 
 ## runtime_data
 
 Per Silver rule `runtime-data`, all per-instance state lives on
-`ConfigEntry.runtime_data` (a `NightscoutRuntimeData` dataclass):
+`ConfigEntry.runtime_data` (a `NightscoutData` dataclass):
 
 ```python
-@dataclass
-class NightscoutRuntimeData:
+@dataclass(slots=True)
+class NightscoutData:
     client: NightscoutV3Client
     coordinator: NightscoutCoordinator
+    store: HistoryStore
     capabilities: ServerCapabilities
-    jwt_state: JwtState
+    jwt_manager: JwtManager
+    jwt_refresh_unsub: Callable[[], None]
 ```
 
-Nothing under `hass.data[DOMAIN][entry.entry_id]`. Unload nukes
-`runtime_data` implicitly when HA releases the entry.
+Nothing under `hass.data[DOMAIN][entry.entry_id]`. Unload calls
+`jwt_refresh_unsub()` and closes `store`; HA releases `runtime_data`
+implicitly when the entry unloads.

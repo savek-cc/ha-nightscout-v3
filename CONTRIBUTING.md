@@ -10,7 +10,8 @@ git clone <repo>
 cd ha-nightscout-v3
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .[dev]
+pip install -e .
+pip install -r requirements-test.txt
 pre-commit install
 ```
 
@@ -61,7 +62,8 @@ new device identifier), extend `SENSITIVE_STRING_KEYS` / `DROP_KEYS` in
 
 ## Test expectations
 
-- Overall coverage floor: **90 %**. `config_flow.py` floor: **95 %**.
+- Overall coverage floor: **95 %**, enforced via `--cov-fail-under=95` in
+  `pyproject.toml`. There is no per-file floor today.
 - New behavior begins with a failing test (TDD). Both the plan and the
   review gates enforce this.
 - **No network in unit tests.** Integration-layer tests use
@@ -85,10 +87,11 @@ Before opening a PR, run:
 python -m scripts.verify_silver --strict-manifest
 pytest --cov
 ruff check .
-python -m script.hassfest --integration-path custom_components/nightscout_v3   # if HA dev repo is accessible
 ```
 
-All four must pass. `verify_silver` checks `quality_scale.yaml`, translation
+All three must pass. If you have a Home Assistant core checkout, also run
+`hassfest` against this integration from that checkout — we don't ship a
+standalone invocation because hassfest is not a pip-installable tool. `verify_silver` checks `quality_scale.yaml`, translation
 completeness, `PARALLEL_UPDATES` presence on platforms, `_attr_has_entity_name`
 on the base entity, and that `manifest.json` declares `quality_scale: silver`.
 
