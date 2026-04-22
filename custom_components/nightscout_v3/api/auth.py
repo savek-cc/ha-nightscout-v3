@@ -74,7 +74,7 @@ class JwtManager:
 
     async def _exchange_once(self, url: str) -> JwtState:
         try:
-            async with self._session.get(
+            async with self._session.post(
                 url, timeout=aiohttp.ClientTimeout(total=30)
             ) as resp:
                 if resp.status == 401:

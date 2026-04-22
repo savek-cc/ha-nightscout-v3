@@ -26,7 +26,7 @@ async def test_initial_exchange_stores_jwt(
 ) -> None:
     freezer.move_to("2026-04-21T00:00:00Z")
     with aioresponses() as m:
-        m.get(
+        m.post(
             f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
             payload=payload,
         )
@@ -41,7 +41,7 @@ async def test_get_valid_jwt_refreshes_near_expiry(
 ) -> None:
     freezer.move_to("2026-04-21T00:00:00Z")
     with aioresponses() as m:
-        m.get(
+        m.post(
             f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
             payload=payload,
             repeat=True,
@@ -58,7 +58,7 @@ async def test_get_valid_jwt_refreshes_near_expiry(
 
 async def test_initial_exchange_raises_auth_on_401(aiohttp_client_session) -> None:
     with aioresponses() as m:
-        m.get(
+        m.post(
             f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
             status=401,
             payload={"status": 401, "message": "unauthorized"},
@@ -79,8 +79,8 @@ async def test_refresh_retries_with_backoff_on_5xx(
     monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
 
     with aioresponses() as m:
-        m.get(f"{BASE_URL}/api/v2/authorization/request/{TOKEN}", status=502, repeat=3)
-        m.get(f"{BASE_URL}/api/v2/authorization/request/{TOKEN}", payload=payload)
+        m.post(f"{BASE_URL}/api/v2/authorization/request/{TOKEN}", status=502, repeat=3)
+        m.post(f"{BASE_URL}/api/v2/authorization/request/{TOKEN}", payload=payload)
         mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
         state = await mgr.initial_exchange()
     assert state.token == payload["result"]["token"]
@@ -94,7 +94,7 @@ async def test_refresh_gives_up_after_max_attempts(
 
     monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
     with aioresponses() as m:
-        m.get(f"{BASE_URL}/api/v2/authorization/request/{TOKEN}", status=502, repeat=True)
+        m.post(f"{BASE_URL}/api/v2/authorization/request/{TOKEN}", status=502, repeat=True)
         mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
         with pytest.raises(ApiError):
             await mgr.initial_exchange()
