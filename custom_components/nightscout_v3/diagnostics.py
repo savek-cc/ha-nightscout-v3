@@ -5,14 +5,15 @@ import time
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+
+from .models import NightscoutConfigEntry
 
 _TO_REDACT = {"url", "access_token", "api_secret", "identifier", "sub", "token"}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    hass: HomeAssistant, entry: NightscoutConfigEntry
 ) -> dict[str, Any]:
     runtime = _collect_runtime(entry)
     return {
@@ -27,7 +28,7 @@ async def async_get_config_entry_diagnostics(
     }
 
 
-def _collect_runtime(entry: ConfigEntry) -> dict[str, Any]:
+def _collect_runtime(entry: NightscoutConfigEntry) -> dict[str, Any]:
     data = getattr(entry, "runtime_data", None)
     if data is None:
         return {}
