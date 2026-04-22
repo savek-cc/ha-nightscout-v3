@@ -12,7 +12,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval
 
 from .api.auth import JwtManager
-from .api.capabilities import ServerCapabilities, probe_capabilities
+from .api.capabilities import probe_capabilities
 from .api.client import NightscoutV3Client
 from .api.exceptions import ApiError, AuthError
 from .const import (
@@ -20,7 +20,6 @@ from .const import (
     CONF_CAPABILITIES,
     CONF_CAPABILITIES_PROBED_AT,
     CONF_URL,
-    DOMAIN,
     JWT_BACKGROUND_REFRESH_HOURS,
 )
 from .coordinator import NightscoutCoordinator

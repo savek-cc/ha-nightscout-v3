@@ -51,7 +51,6 @@ async def _capture(cfg: ClientConfig, endpoints: list[str], dst: Path) -> None:
     from custom_components.nightscout_v3.api.auth import JwtManager
     from custom_components.nightscout_v3.api.client import NightscoutV3Client
 
-    dst.mkdir(parents=True, exist_ok=True)
     async with aiohttp.ClientSession() as session:
         jwt = JwtManager(session, cfg.base_url, cfg.token)
         await jwt.initial_exchange()
@@ -84,6 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dst", default="captures", type=Path)
     args = parser.parse_args(argv)
     cfg = build_client_config()
+    args.dst.mkdir(parents=True, exist_ok=True)
     asyncio.run(_capture(cfg, args.endpoints, args.dst))
     return 0
 

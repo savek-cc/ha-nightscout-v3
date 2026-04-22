@@ -24,10 +24,9 @@ def auto_enable_custom_integrations(
     # For HA integration tests, we need enable_custom_integrations from pytest-homeassistant-custom-component
     # For pure unit tests, skip this fixture
     try:
-        fixture = request.getfixturevalue("enable_custom_integrations")
+        request.getfixturevalue("enable_custom_integrations")
     except pytest.FixtureLookupError:
-        # Not a HA test, no fixture needed
-        fixture = None
+        pass
     yield
 
 

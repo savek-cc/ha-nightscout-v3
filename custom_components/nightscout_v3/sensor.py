@@ -4,14 +4,13 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import OPT_ENABLED_FEATURES, OPT_STATS_WINDOWS, MANDATORY_STATS_WINDOW
 from .entity import NightscoutEntity
-from .feature_registry import Category, FEATURE_REGISTRY, FeatureDef, features_for_capabilities, stats_feature_defs
+from .feature_registry import FeatureDef, features_for_capabilities, stats_feature_defs
 from .models import NightscoutConfigEntry
 
 PARALLEL_UPDATES = 0
@@ -31,7 +30,10 @@ async def async_setup_entry(
             continue
         entities.append(NightscoutSensor(data.coordinator, f))
 
-    windows = sorted(set(entry.options.get(OPT_STATS_WINDOWS, [MANDATORY_STATS_WINDOW])) | {MANDATORY_STATS_WINDOW})
+    windows = sorted(
+        set(entry.options.get(OPT_STATS_WINDOWS, [MANDATORY_STATS_WINDOW]))
+        | {MANDATORY_STATS_WINDOW}
+    )
     for w in windows:
         for f in stats_feature_defs(w):
             if not enabled.get(f.key, f.default_enabled):

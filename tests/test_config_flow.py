@@ -10,7 +10,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.nightscout_v3.const import DOMAIN
-from tests.conftest import load_fixture
 
 
 @pytest.fixture

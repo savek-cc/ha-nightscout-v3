@@ -4,7 +4,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
