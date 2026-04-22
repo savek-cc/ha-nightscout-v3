@@ -115,6 +115,15 @@ async def test_options_features_sub_step(hass, valid_caps) -> None:
     assert result["type"].name == "FORM"
     assert result["step_id"] == "features"
 
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"bg_current": False, "pump_reservoir": True},
+    )
+    assert result["type"].name == "CREATE_ENTRY"
+    enabled = result["data"]["enabled_features"]
+    assert enabled["bg_current"] is False
+    assert enabled["pump_reservoir"] is True
+    assert result["data"]["stats_windows"] == [14]
+
 
 async def test_options_stats_windows(hass, valid_caps) -> None:
     from pytest_homeassistant_custom_component.common import MockConfigEntry
