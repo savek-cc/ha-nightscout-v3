@@ -18,9 +18,16 @@ def load_fixture(name: str) -> dict | list:
 
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(
-    enable_custom_integrations: None,  # noqa: ARG001 — fixture from pytest-homeassistant-custom-component
+    request: pytest.FixtureRequest,
 ) -> Generator[None, None, None]:
-    """Auto-enable loading the integration in all tests."""
+    """Auto-enable loading the integration in all tests (skip for pure unit tests)."""
+    # For HA integration tests, we need enable_custom_integrations from pytest-homeassistant-custom-component
+    # For pure unit tests, skip this fixture
+    try:
+        fixture = request.getfixturevalue("enable_custom_integrations")
+    except pytest.FixtureLookupError:
+        # Not a HA test, no fixture needed
+        fixture = None
     yield
 
 
