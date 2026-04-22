@@ -156,14 +156,17 @@ After:  `totalKeysExamined: 1`, `IXSCAN → FETCH → LIMIT`, no sort.
 Index build is cheap (a few seconds on ~500k treatments) and the index
 itself stays small.
 
-Upstream: the default Nightscout schema (PR
-[#5463](https://github.com/nightscout/cgm-remote-monitor/pull/5463))
-declares `{eventType:1, duration:1, created_at:1}` — adding
-`{eventType:1, created_at:-1}` would fix this for every deployment.
-Issue [#7898](https://github.com/nightscout/cgm-remote-monitor/issues/7898)
-reports the user-visible symptom (sort direction ignored on
-`/api/v3/treatments?eventType$eq=…&sort$desc=created_at`); the missing
-compound index is the likely root cause.
+Upstream tracking:
+[nightscout/cgm-remote-monitor#8477](https://github.com/nightscout/cgm-remote-monitor/issues/8477)
+— proposes shipping this index as part of the default schema.
+Related: PR
+[#5463](https://github.com/nightscout/cgm-remote-monitor/pull/5463)
+introduced the current `{eventType, duration, created_at}` index;
+issue
+[#7898](https://github.com/nightscout/cgm-remote-monitor/issues/7898)
+reports the correctness symptom (sort direction ignored on
+`/api/v3/treatments?eventType$eq=…&sort$desc=created_at`) that the
+missing compound index likely causes.
 
 ## Troubleshooting
 
