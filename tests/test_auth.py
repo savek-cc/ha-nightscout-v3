@@ -204,6 +204,34 @@ async def test_initial_exchange_raises_api_error_on_malformed_jwt_body(
     assert "Malformed JWT response" in str(excinfo.value)
 
 
+async def test_malformed_jwt_error_does_not_leak_token_body(
+    aiohttp_client_session, monkeypatch
+) -> None:
+    """A malformed response must not dump the raw JWT into the ApiError.
+
+    Regression test for the final release review C-1: the exception
+    propagates to a DEBUG log at the entry-level refresh handler.
+    """
+    async def fake_sleep(_d: float) -> None: ...
+    monkeypatch.setattr(
+        "custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep,
+    )
+    leaked_jwt = "eyJLEAKME.eyJhbGciOiJIUzI1NiJ9.SIGSIGSIG"
+    with aioresponses() as m:
+        m.post(
+            f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
+            payload={"status": 200, "result": {"token": leaked_jwt, "iat": 0}},
+            repeat=True,
+        )
+        mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
+        with pytest.raises(ApiError) as excinfo:
+            await mgr.initial_exchange()
+    message = str(excinfo.value)
+    cause = excinfo.value.__cause__
+    assert leaked_jwt not in message
+    assert cause is None or leaked_jwt not in str(cause)
+
+
 @pytest.fixture
 async def aiohttp_client_session():
     async with aiohttp.ClientSession() as s:

@@ -85,13 +85,21 @@ class JwtManager:
                     raise ApiError(f"Unexpected status {resp.status}", status=resp.status)
                 body = await resp.json()
         except (aiohttp.ClientError, TimeoutError) as exc:
-            raise ApiError(f"Network error during JWT exchange: {exc}") from exc
+            # Avoid `{exc}` interpolation: the exchange URL embeds the raw
+            # access token, and some aiohttp error reprs include that URL.
+            raise ApiError(
+                f"Network error during JWT exchange: {type(exc).__name__}"
+            ) from exc
 
         result = body.get("result", {})
         token = result.get("token")
         exp = result.get("exp")
         iat = result.get("iat")
         if token is None or exp is None or iat is None:
-            raise ApiError(f"Malformed JWT response: {body}")
+            missing = [
+                name for name, value in (("token", token), ("exp", exp), ("iat", iat))
+                if value is None
+            ]
+            raise ApiError(f"Malformed JWT response: missing fields {missing}")
         self._state = JwtState(token=token, iat=int(iat), exp=int(exp))
         return self._state
