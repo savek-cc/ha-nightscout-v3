@@ -52,8 +52,8 @@ _LOGGER = logging.getLogger(__name__)
 
 _USER_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_URL): cv.url,
-        vol.Required(CONF_ACCESS_TOKEN): cv.string,
+        vol.Required(CONF_URL): str,
+        vol.Required(CONF_ACCESS_TOKEN): str,
     }
 )
 
@@ -145,7 +145,7 @@ class NightscoutConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=vol.Schema({vol.Required(CONF_ACCESS_TOKEN): cv.string}),
+            data_schema=vol.Schema({vol.Required(CONF_ACCESS_TOKEN): str}),
             errors=errors,
         )
 
