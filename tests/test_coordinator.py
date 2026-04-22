@@ -100,6 +100,63 @@ async def test_api_error_becomes_update_failed(
         await coord._async_update_data()
 
 
+async def test_backfill_paginates_until_short_batch(
+    hass: HomeAssistant, mock_client, store, entry
+) -> None:
+    """Initial sync must paginate via before_date, not stop after 1 batch."""
+    import time as _time
+    now_ms = int(_time.time() * 1000)
+    step = 300_000  # 5 minutes
+    batch1 = [
+        {"identifier": f"a{i}", "date": now_ms - i * step, "sgv": 140, "type": "sgv"}
+        for i in range(1000)
+    ]
+    batch1_min = batch1[-1]["date"]
+    batch2 = [
+        {"identifier": f"b{i}", "date": batch1_min - (i + 1) * step, "sgv": 150, "type": "sgv"}
+        for i in range(500)
+    ]
+    batch2_min = batch2[-1]["date"]
+    mock_client.get_entries.side_effect = [batch1, batch2]
+
+    coord = NightscoutCoordinator(hass, mock_client, _caps(), store, entry)
+    await coord._backfill_entries(entries_lm=42)
+
+    calls = mock_client.get_entries.call_args_list
+    assert len(calls) == 2, "second batch had <1000 docs, loop must stop after it"
+    assert calls[0].kwargs["before_date"] is None
+    assert calls[1].kwargs["before_date"] == batch1_min
+    assert all("last_modified" not in c.kwargs for c in calls), \
+        "srvModified filter must not be sent on initial sync"
+    state = await store.get_sync_state("entries")
+    assert state is not None
+    assert state.last_modified == 42
+    assert state.oldest_date == batch2_min
+    assert state.newest_date == batch1[0]["date"]
+
+
+async def test_incremental_entries_extends_window(
+    hass: HomeAssistant, mock_client, store, entry
+) -> None:
+    """Incremental sync asks for entries since last newest_date and merges the window."""
+    await store.update_sync_state("entries", last_modified=10, oldest_date=100, newest_date=200)
+    mock_client.get_entries.return_value = [
+        {"identifier": "new1", "date": 250, "sgv": 145, "type": "sgv"},
+        {"identifier": "new2", "date": 210, "sgv": 142, "type": "sgv"},
+    ]
+
+    coord = NightscoutCoordinator(hass, mock_client, _caps(), store, entry)
+    newest = await store.get_sync_state("entries")
+    await coord._incremental_entries(entries_lm=20, newest=newest)
+
+    call = mock_client.get_entries.call_args
+    assert call.kwargs["since_date"] == 200
+    state = await store.get_sync_state("entries")
+    assert state.last_modified == 20
+    assert state.oldest_date == 100  # unchanged
+    assert state.newest_date == 250
+
+
 async def test_agp_summary_exposes_per_hour_percentile_lists(
     hass: HomeAssistant, mock_client, store, entry
 ) -> None:

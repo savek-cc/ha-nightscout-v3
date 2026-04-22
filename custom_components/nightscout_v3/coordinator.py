@@ -165,22 +165,63 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         if entries_lm > self._last_modified_cache.get("entries", 0):
             newest = await self._store.get_sync_state("entries")
-            since = newest.newest_date if newest else _day_ago_ms(STATS_HISTORY_MAX_DAYS)
-            fresh = await self._client.get_entries(limit=1000, since_date=since, last_modified=self._last_modified_cache.get("entries", 0))
-            if fresh:
-                await self._store.insert_batch(fresh)
-                await self._store.update_sync_state(
-                    "entries",
-                    last_modified=entries_lm,
-                    oldest_date=min(int(e["date"]) for e in fresh),
-                    newest_date=max(int(e["date"]) for e in fresh),
-                )
-                self._stats_dirty = True
+            if newest is None:
+                await self._backfill_entries(entries_lm)
+            else:
+                await self._incremental_entries(entries_lm, newest)
             self._last_modified_cache["entries"] = entries_lm
 
         if treatments_lm > self._last_modified_cache.get("treatments", 0):
             await self._refresh_treatment_aware_features()
             self._last_modified_cache["treatments"] = treatments_lm
+
+    async def _backfill_entries(self, entries_lm: int) -> None:
+        """Initial sync: paginate backwards until we cover STATS_HISTORY_MAX_DAYS.
+
+        srvModified is not used as a filter here — it's absent on legacy
+        entries (anything not written through v3), so a $gt=0 filter
+        rejects the entire history.
+        """
+        cutoff = _day_ago_ms(STATS_HISTORY_MAX_DAYS)
+        before: int | None = None
+        overall_oldest: int | None = None
+        overall_newest: int | None = None
+        while True:
+            batch = await self._client.get_entries(
+                limit=1000, since_date=cutoff, before_date=before,
+            )
+            if not batch:
+                break
+            await self._store.insert_batch(batch)
+            dates = [int(e["date"]) for e in batch]
+            batch_min, batch_max = min(dates), max(dates)
+            overall_oldest = batch_min if overall_oldest is None else min(overall_oldest, batch_min)
+            overall_newest = batch_max if overall_newest is None else max(overall_newest, batch_max)
+            if len(batch) < 1000 or batch_min <= cutoff:
+                break
+            before = batch_min
+        if overall_oldest is not None:
+            await self._store.update_sync_state(
+                "entries",
+                last_modified=entries_lm,
+                oldest_date=overall_oldest,
+                newest_date=overall_newest,
+            )
+            self._stats_dirty = True
+
+    async def _incremental_entries(self, entries_lm: int, newest: Any) -> None:
+        """Fetch entries newer than our last-seen newest_date."""
+        fresh = await self._client.get_entries(limit=1000, since_date=newest.newest_date)
+        if fresh:
+            await self._store.insert_batch(fresh)
+            dates = [int(e["date"]) for e in fresh]
+            await self._store.update_sync_state(
+                "entries",
+                last_modified=entries_lm,
+                oldest_date=min(newest.oldest_date, min(dates)),
+                newest_date=max(newest.newest_date, max(dates)),
+            )
+            self._stats_dirty = True
 
     async def _refresh_treatment_aware_features(self) -> None:
         for slot, event in _TREATMENT_AGE_EVENTS.items():
