@@ -43,3 +43,6 @@ Thumbs.db
 # Dev scratch
 .tmp/
 scratch/
+
+# Raw fixture captures — anonymize before committing
+captures/
