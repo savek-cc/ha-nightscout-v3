@@ -1,0 +1,198 @@
+# Nightscout v3 — User Dashboard
+#
+# Requires HACS frontend plugins: apexcharts-card, mini-graph-card, mushroom, card-mod.
+# Assumes the integration's device slug is "nightscout_v3". If your config-entry
+# title differs (e.g. "DevInstance", "ProdInstance"), entity IDs will be
+# sensor.<your_slug>_<feature_key>. Search-and-replace "nightscout_v3" to match.
+#
+# Feature keys are the stable identifiers from custom_components/nightscout_v3/
+# feature_registry.py. Stats features embed a window suffix (e.g. 14d).
+
+title: Nightscout
+views:
+  - title: Übersicht
+    path: overview
+    icon: mdi:diabetes
+    badges: []
+    cards:
+      - type: custom:mushroom-template-card
+        primary: "{{ states('sensor.nightscout_v3_bg_current') }} mg/dL"
+        secondary: >-
+          {{ states('sensor.nightscout_v3_bg_trend_arrow') }} ·
+          Δ {{ states('sensor.nightscout_v3_bg_delta') }} mg/dL
+        icon: mdi:water
+        icon_color: >-
+          {% set v = states('sensor.nightscout_v3_bg_current') | float(0) %}
+          {% if v < 70 %}red
+          {% elif v > 180 %}orange
+          {% else %}green{% endif %}
+      - type: custom:apexcharts-card
+        header:
+          show: true
+          title: BG 6 h
+        graph_span: 6h
+        span:
+          end: minute
+        series:
+          - entity: sensor.nightscout_v3_bg_current
+            stroke_width: 2
+            group_by:
+              func: avg
+              duration: 5min
+      - type: horizontal-stack
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: sensor.nightscout_v3_loop_iob
+            name: IOB
+            icon: mdi:needle
+          - type: custom:mushroom-entity-card
+            entity: sensor.nightscout_v3_loop_cob
+            name: COB
+            icon: mdi:food-apple
+          - type: custom:mushroom-entity-card
+            entity: sensor.nightscout_v3_pump_temp_basal_rate
+            name: Temp
+            icon: mdi:pump
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.nightscout_v3_loop_active
+        name: Loop
+        icon: mdi:loop
+
+  - title: Trend
+    path: trend
+    icon: mdi:chart-line
+    cards:
+      - type: custom:apexcharts-card
+        header:
+          show: true
+          title: BG 24 h mit Zielbereich
+        graph_span: 24h
+        apex_config:
+          annotations:
+            yaxis:
+              - y: 70
+                borderColor: red
+              - y: 180
+                borderColor: orange
+        series:
+          - entity: sensor.nightscout_v3_bg_current
+            stroke_width: 2
+      - type: custom:mini-graph-card
+        name: IOB 24 h
+        entities:
+          - sensor.nightscout_v3_loop_iob
+        hours_to_show: 24
+        points_per_hour: 2
+      - type: custom:mini-graph-card
+        name: COB 24 h
+        entities:
+          - sensor.nightscout_v3_loop_cob
+        hours_to_show: 24
+        points_per_hour: 2
+
+  - title: AGP
+    path: agp
+    icon: mdi:chart-bell-curve
+    cards:
+      # The stat_agp_14d sensor exposes hourly percentiles as attributes
+      # (p05/p25/p50/p75/p95 keyed by hour 0-23). It is disabled by default
+      # in the integration — enable it in HA's entity registry to populate
+      # this view. For a shipped chart, point apexcharts-card at the attributes.
+      - type: entity
+        entity: sensor.nightscout_v3_stat_agp_14d
+        name: AGP-Zusammenfassung (14 d)
+      - type: custom:apexcharts-card
+        header:
+          show: true
+          title: AGP – Median über 24 h (14 d)
+        graph_span: 14d
+        series:
+          - entity: sensor.nightscout_v3_stat_agp_14d
+            attribute: p50_by_hour
+            type: line
+            stroke_width: 2
+
+  - title: Statistik
+    path: stats
+    icon: mdi:chart-box
+    cards:
+      - type: grid
+        columns: 2
+        cards:
+          - type: entity
+            entity: sensor.nightscout_v3_stat_tir_in_range_14d
+            name: TIR 70–180 (14 d)
+          - type: entity
+            entity: sensor.nightscout_v3_stat_gmi_14d
+            name: GMI (14 d)
+          - type: entity
+            entity: sensor.nightscout_v3_stat_hba1c_14d
+            name: eHbA1c DCCT (14 d)
+          - type: entity
+            entity: sensor.nightscout_v3_stat_cv_14d
+            name: Variationskoeffizient (14 d)
+          - type: entity
+            entity: sensor.nightscout_v3_stat_mean_14d
+            name: Mittlere BG (14 d)
+          - type: entity
+            entity: sensor.nightscout_v3_stat_sd_14d
+            name: SD (14 d)
+          - type: entity
+            entity: sensor.nightscout_v3_stat_tir_very_low_14d
+            name: TIR sehr niedrig (14 d)
+          - type: entity
+            entity: sensor.nightscout_v3_stat_tir_low_14d
+            name: TIR niedrig (14 d)
+          - type: entity
+            entity: sensor.nightscout_v3_stat_tir_high_14d
+            name: TIR hoch (14 d)
+          - type: entity
+            entity: sensor.nightscout_v3_stat_tir_very_high_14d
+            name: TIR sehr hoch (14 d)
+          - type: entity
+            entity: sensor.nightscout_v3_stat_lbgi_14d
+            name: LBGI (14 d)
+          - type: entity
+            entity: sensor.nightscout_v3_stat_hbgi_14d
+            name: HBGI (14 d)
+
+  - title: Loop
+    path: loop
+    icon: mdi:loop
+    cards:
+      - type: entities
+        title: Loop
+        entities:
+          - binary_sensor.nightscout_v3_loop_active
+          - sensor.nightscout_v3_loop_mode
+          - sensor.nightscout_v3_loop_eventual_bg
+          - sensor.nightscout_v3_loop_target_bg
+          - sensor.nightscout_v3_loop_sensitivity_ratio
+          - sensor.nightscout_v3_loop_pred_bgs
+          - sensor.nightscout_v3_loop_last_enacted_age_minutes
+      - type: entities
+        title: Pumpe
+        entities:
+          - sensor.nightscout_v3_pump_reservoir
+          - sensor.nightscout_v3_pump_battery
+          - sensor.nightscout_v3_pump_status
+          - sensor.nightscout_v3_pump_active_profile
+          - sensor.nightscout_v3_pump_base_basal
+          - sensor.nightscout_v3_pump_temp_basal_remaining
+          - sensor.nightscout_v3_pump_last_bolus_amount
+          - sensor.nightscout_v3_pump_last_bolus_time
+      - type: entities
+        title: Uploader
+        entities:
+          - binary_sensor.nightscout_v3_uploader_online
+          - binary_sensor.nightscout_v3_uploader_charging
+          - sensor.nightscout_v3_uploader_battery
+      - type: entities
+        title: Care
+        entities:
+          - sensor.nightscout_v3_care_sage_days
+          - sensor.nightscout_v3_care_cage_days
+          - sensor.nightscout_v3_care_iage_days
+          - sensor.nightscout_v3_care_bage_days
+          - sensor.nightscout_v3_care_last_meal_carbs
+          - sensor.nightscout_v3_care_carbs_today
