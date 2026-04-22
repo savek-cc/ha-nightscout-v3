@@ -19,6 +19,7 @@ class NightscoutEntity(CoordinatorEntity["NightscoutCoordinator"]):
     _attr_has_entity_name = True
 
     def __init__(self, coordinator: "NightscoutCoordinator", feature: "FeatureDef") -> None:
+        """Initialize the Nightscout entity for the given feature."""
         super().__init__(coordinator)
         self._feature = feature
         entry_id = coordinator.config_entry.entry_id

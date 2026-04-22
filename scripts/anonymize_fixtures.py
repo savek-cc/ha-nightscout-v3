@@ -74,6 +74,7 @@ def _scrub(obj: Any, offset: int) -> Any:
 
 
 def anonymize_payload(payload: dict[str, Any], epoch_offset_ms: int) -> dict[str, Any]:
+    """Return a scrubbed copy of `payload` with timestamps rebased by the given offset."""
     return _scrub(payload, epoch_offset_ms)
 
 
@@ -86,6 +87,7 @@ def _process_file(src: Path, dst_dir: Path, offset: int) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the anonymize_fixtures CLI."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("src", nargs="+", help="Source JSON files or directories")
     parser.add_argument("dst", help="Destination directory")

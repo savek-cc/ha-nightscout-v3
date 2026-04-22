@@ -28,11 +28,14 @@ FORBIDDEN_HOSTS = {"prod-nightscout.example.invalid"}
 
 @dataclass
 class ClientConfig:
+    """Base URL and token for a capture target."""
+
     base_url: str
     token: str
 
 
 def build_client_config() -> ClientConfig:
+    """Read NS_URL/NS_TOKEN from the environment and reject forbidden hosts."""
     url = os.environ.get("NS_URL")
     token = os.environ.get("NS_TOKEN")
     if not url or not token:
@@ -78,6 +81,7 @@ async def _capture(cfg: ClientConfig, endpoints: list[str], dst: Path) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the capture_fixtures CLI."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("endpoints", nargs="+")
     parser.add_argument("--dst", default="captures", type=Path)

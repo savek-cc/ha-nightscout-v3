@@ -26,10 +26,12 @@ class ServerCapabilities:
     last_probed_at_ms: int
 
     def to_dict(self) -> dict[str, Any]:
+        """Return a plain-dict representation for persistence."""
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ServerCapabilities":
+        """Reconstruct a ServerCapabilities from its dict representation."""
         return cls(**data)
 
 

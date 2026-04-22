@@ -56,11 +56,13 @@ class HistoryStore:
     """aiosqlite-backed rolling history for a single config entry."""
 
     def __init__(self, path: Path, db: aiosqlite.Connection) -> None:
+        """Initialize the history store with an open aiosqlite connection."""
         self._path = path
         self._db = db
 
     @classmethod
     async def open(cls, path: Path) -> "HistoryStore":
+        """Open (or create) the history store at the given path."""
         path.parent.mkdir(parents=True, exist_ok=True)
         db = await aiosqlite.connect(path)
         db.row_factory = aiosqlite.Row
@@ -69,14 +71,17 @@ class HistoryStore:
         return store
 
     async def close(self) -> None:
+        """Close the underlying aiosqlite connection."""
         await self._db.close()
 
     async def schema_version(self) -> int:
+        """Return the persisted schema version, or 0 if missing."""
         async with self._db.execute("SELECT version FROM schema_version LIMIT 1") as cur:
             row = await cur.fetchone()
         return int(row["version"]) if row else 0
 
     async def insert_batch(self, entries: list[dict[str, Any]]) -> int:
+        """Insert entries (ignoring duplicates) and return the number newly added."""
         if not entries:
             return 0
         rows = [
@@ -104,6 +109,7 @@ class HistoryStore:
         return int(after - before)
 
     async def entries_in_window(self, days: int, *, now_ms: int | None = None) -> list[dict[str, Any]]:
+        """Return entries within the last `days` days, oldest first."""
         now_ms = now_ms or int(time.time() * 1000)
         cutoff = now_ms - days * 86_400_000
         async with self._db.execute(
@@ -114,6 +120,7 @@ class HistoryStore:
             return [dict(row) async for row in cur]
 
     async def get_sync_state(self, collection: str) -> SyncState | None:
+        """Return the sync state for a collection, or None if missing."""
         async with self._db.execute(
             "SELECT collection, last_modified, oldest_date, newest_date, updated_at_ms "
             "FROM sync_state WHERE collection = ?",
@@ -125,6 +132,7 @@ class HistoryStore:
     async def update_sync_state(
         self, collection: str, *, last_modified: int, oldest_date: int, newest_date: int
     ) -> None:
+        """Upsert the sync state row for a collection."""
         now_ms = int(time.time() * 1000)
         await self._db.execute(
             "INSERT INTO sync_state (collection, last_modified, oldest_date, newest_date, updated_at_ms) "
@@ -139,6 +147,7 @@ class HistoryStore:
         await self._db.commit()
 
     async def prune(self, keep_days: int, *, now_ms: int | None = None) -> int:
+        """Delete entries older than `keep_days` and return the row count removed."""
         now_ms = now_ms or int(time.time() * 1000)
         cutoff = now_ms - keep_days * 86_400_000
         cur = await self._db.execute("DELETE FROM entries WHERE date < ?", (cutoff,))
@@ -146,6 +155,7 @@ class HistoryStore:
         return cur.rowcount or 0
 
     async def get_stats_cache(self, window_days: int) -> dict[str, Any] | None:
+        """Return the cached stats payload for a window, or None if missing."""
         async with self._db.execute(
             "SELECT payload FROM stats_cache WHERE window_days = ?", (window_days,)
         ) as cur:
@@ -153,6 +163,7 @@ class HistoryStore:
         return json.loads(row["payload"]) if row else None
 
     async def set_stats_cache(self, window_days: int, payload: dict[str, Any]) -> None:
+        """Upsert the cached stats payload for a window."""
         await self._db.execute(
             "INSERT INTO stats_cache (window_days, computed_at, payload) VALUES (?, ?, ?) "
             "ON CONFLICT(window_days) DO UPDATE SET "
@@ -163,6 +174,7 @@ class HistoryStore:
         await self._db.commit()
 
     async def is_corrupt(self) -> bool:
+        """Return True if SQLite integrity_check reports a problem."""
         try:
             async with self._db.execute("PRAGMA integrity_check") as cur:
                 row = await cur.fetchone()

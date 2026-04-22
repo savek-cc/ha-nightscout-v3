@@ -19,6 +19,7 @@ PARALLEL_UPDATES = 0
 async def async_setup_entry(
     hass: HomeAssistant, entry: NightscoutConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
+    """Set up Nightscout sensor entities from a config entry."""
     data = entry.runtime_data
     enabled = entry.options.get(OPT_ENABLED_FEATURES, {})
     active = features_for_capabilities(data.capabilities)
@@ -47,6 +48,7 @@ class NightscoutSensor(NightscoutEntity, SensorEntity):
     """One coordinator-backed SensorEntity."""
 
     def __init__(self, coordinator, feature: FeatureDef) -> None:
+        """Initialize the Nightscout sensor for a feature."""
         super().__init__(coordinator, feature)
         self._attr_device_class = feature.device_class
         self._attr_state_class = feature.state_class
@@ -54,6 +56,7 @@ class NightscoutSensor(NightscoutEntity, SensorEntity):
 
     @property
     def native_value(self) -> Any:
+        """Return the sensor state, or None for complex (dict/list) values."""
         val = self._extract()
         if isinstance(val, dict | list):
             return None  # complex values are surfaced as extra_state_attributes
@@ -61,6 +64,7 @@ class NightscoutSensor(NightscoutEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return complex values as extra state attributes, else None."""
         val = self._extract()
         if isinstance(val, dict):
             return val

@@ -28,6 +28,8 @@ SILVER_RULES_REQUIRED = {
 
 
 class RuleStatus(str, Enum):
+    """Possible quality-scale rule statuses."""
+
     DONE = "done"
     TODO = "todo"
     EXEMPT = "exempt"
@@ -35,6 +37,8 @@ class RuleStatus(str, Enum):
 
 @dataclass
 class QsReport:
+    """Aggregated result of scanning quality_scale.yaml."""
+
     statuses: dict[str, RuleStatus] = field(default_factory=dict)
     failures: list[str] = field(default_factory=list)
 
@@ -46,6 +50,7 @@ def _coerce(raw: str) -> RuleStatus:
 
 
 def check_quality_scale_yaml(path: Path) -> QsReport:
+    """Scan quality_scale.yaml and collect rule statuses and failures."""
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     report = QsReport()
     rules = (data or {}).get("rules", {})
@@ -82,6 +87,7 @@ def _flatten(obj: object, prefix: str = "") -> set[str]:
 
 
 def check_translations(root: Path) -> list[str]:
+    """Return translation keys from strings.json missing in any locale file."""
     strings_path = root / "strings.json"
     if not strings_path.exists():
         return []
@@ -100,6 +106,7 @@ def check_translations(root: Path) -> list[str]:
 
 
 def check_parallel_updates(root: Path) -> list[str]:
+    """Return platform filenames missing a PARALLEL_UPDATES declaration."""
     missing: list[str] = []
     for platform in ("sensor.py", "binary_sensor.py"):
         p = root / platform
@@ -111,6 +118,7 @@ def check_parallel_updates(root: Path) -> list[str]:
 
 
 def check_has_entity_name(root: Path) -> list[str]:
+    """Return files lacking `_attr_has_entity_name = True`, ignoring entity-base inheritance."""
     pattern = re.compile(r"_attr_has_entity_name\s*=\s*True")
     offenders: list[str] = []
     entity_file = root / "entity.py"
@@ -123,11 +131,13 @@ def check_has_entity_name(root: Path) -> list[str]:
 
 
 def check_manifest_declares_silver(root: Path) -> bool:
+    """Return True if manifest.json declares quality_scale=silver."""
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
     return manifest.get("quality_scale") == "silver"
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the verify_silver CLI."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=INTEGRATION)
     parser.add_argument(

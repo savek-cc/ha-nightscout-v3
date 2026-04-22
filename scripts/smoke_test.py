@@ -19,6 +19,7 @@ FORBIDDEN_HOSTS = {"prod-nightscout.example.invalid"}
 
 
 def refuse_forbidden_hosts(url: str) -> None:
+    """Exit if `url` points to a known production host."""
     for forbidden in FORBIDDEN_HOSTS:
         if forbidden in url:
             sys.stderr.write(f"smoke_test refuses to target {forbidden}\n")
@@ -26,6 +27,7 @@ def refuse_forbidden_hosts(url: str) -> None:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse smoke_test CLI arguments."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", required=True)
     parser.add_argument("--token", required=True)
@@ -67,6 +69,7 @@ async def _run(url: str, token: str, limit: int) -> dict[str, object]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the smoke_test CLI."""
     args = parse_args(argv)
     refuse_forbidden_hosts(args.url)
     summary = asyncio.run(_run(args.url, args.token, args.limit))

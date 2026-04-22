@@ -74,6 +74,7 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         store: HistoryStore,
         entry: ConfigEntry,
     ) -> None:
+        """Initialize the Nightscout coordinator."""
         super().__init__(
             hass,
             _LOGGER,
@@ -95,18 +96,22 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @property
     def capabilities(self) -> ServerCapabilities:
+        """Return the cached server capabilities."""
         return self._capabilities
 
     @property
     def client(self) -> NightscoutV3Client:
+        """Return the Nightscout v3 API client."""
         return self._client
 
     @property
     def store(self) -> HistoryStore:
+        """Return the history store backing this coordinator."""
         return self._store
 
     @property
     def last_tick_summary(self) -> dict[str, int]:
+        """Return a copy of the last tick's timing summary."""
         return dict(self._last_tick_summary)
 
     async def _async_update_data(self) -> dict[str, Any]:

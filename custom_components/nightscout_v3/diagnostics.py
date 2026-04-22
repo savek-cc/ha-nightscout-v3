@@ -27,6 +27,7 @@ _TO_REDACT = {
 async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: NightscoutConfigEntry
 ) -> dict[str, Any]:
+    """Return redacted diagnostics for a config entry."""
     runtime = _collect_runtime(entry)
     return {
         "entry": {

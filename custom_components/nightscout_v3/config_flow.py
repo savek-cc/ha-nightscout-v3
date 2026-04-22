@@ -76,11 +76,13 @@ class NightscoutConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     def __init__(self) -> None:
+        """Initialize the Nightscout config flow."""
         self._url: str | None = None
         self._token: str | None = None
         self._capabilities: Any | None = None
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Handle the user step."""
         errors: dict[str, str] = {}
         if user_input is not None:
             url = _normalize(user_input[CONF_URL])
@@ -109,12 +111,14 @@ class NightscoutConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="user", data_schema=_USER_SCHEMA, errors=errors)
 
     async def async_step_reauth(self, entry_data: dict[str, Any]) -> ConfigFlowResult:
+        """Handle the reauth step."""
         self._url = entry_data[CONF_URL]
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Handle the reauth_confirm step."""
         errors: dict[str, str] = {}
         if user_input is not None:
             token = user_input[CONF_ACCESS_TOKEN]
@@ -175,6 +179,7 @@ class NightscoutConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        """Return the options flow for this integration."""
         return NightscoutOptionsFlow(config_entry)
 
 
@@ -182,9 +187,11 @@ class NightscoutOptionsFlow(OptionsFlow):
     """Options: menu + sub-steps (Task 3.5 fills all branches)."""
 
     def __init__(self, entry: ConfigEntry) -> None:
+        """Initialize the Nightscout options flow."""
         self._entry = entry
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Handle the init step."""
         return self.async_show_menu(
             step_id="init",
             menu_options=["features", "stats", "thresholds", "polling", "rediscover"],
@@ -193,6 +200,7 @@ class NightscoutOptionsFlow(OptionsFlow):
     async def async_step_features(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Handle the features step."""
         from .api.capabilities import ServerCapabilities
 
         caps = ServerCapabilities.from_dict(self._entry.data[CONF_CAPABILITIES])
@@ -216,6 +224,7 @@ class NightscoutOptionsFlow(OptionsFlow):
     async def async_step_stats(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Handle the stats step."""
         if user_input is not None:
             chosen = sorted(
                 {int(w) for w in user_input.get(OPT_STATS_WINDOWS, [])}
@@ -237,6 +246,7 @@ class NightscoutOptionsFlow(OptionsFlow):
     async def async_step_thresholds(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Handle the thresholds step."""
         if user_input is not None:
             return self.async_create_entry(title="", data={**self._entry.options, **user_input})
         current = self._entry.options
@@ -263,6 +273,7 @@ class NightscoutOptionsFlow(OptionsFlow):
     async def async_step_polling(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Handle the polling step."""
         if user_input is not None:
             return self.async_create_entry(title="", data={**self._entry.options, **user_input})
         current = self._entry.options
@@ -294,6 +305,7 @@ class NightscoutOptionsFlow(OptionsFlow):
     async def async_step_rediscover(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Handle the rediscover step."""
         try:
             session = async_get_clientsession(self.hass)
             url = self._entry.data[CONF_URL]

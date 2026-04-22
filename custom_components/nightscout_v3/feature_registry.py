@@ -13,6 +13,8 @@ from .api.capabilities import ServerCapabilities
 
 
 class Category(StrEnum):
+    """Feature category grouping for the options flow."""
+
     BG = "bg"
     PUMP = "pump"
     LOOP = "loop"

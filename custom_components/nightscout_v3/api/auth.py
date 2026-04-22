@@ -30,6 +30,7 @@ class JwtManager:
     """Manages the Nightscout v3 JWT: initial exchange + on-demand refresh."""
 
     def __init__(self, session: aiohttp.ClientSession, base_url: str, access_token: str) -> None:
+        """Initialize the JWT manager."""
         self._session = session
         self._base_url = base_url.rstrip("/")
         self._access_token = access_token
@@ -38,6 +39,7 @@ class JwtManager:
 
     @property
     def state(self) -> JwtState | None:
+        """Return the last-known JWT state, or None if never exchanged."""
         return self._state
 
     async def initial_exchange(self) -> JwtState:

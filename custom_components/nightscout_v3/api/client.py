@@ -23,14 +23,17 @@ class NightscoutV3Client:
         base_url: str,
         jwt_manager: JwtManager,
     ) -> None:
+        """Initialize the Nightscout v3 client."""
         self._session = session
         self._base_url = base_url.rstrip("/")
         self._jwt_manager = jwt_manager
 
     async def get_status(self) -> dict[str, Any]:
+        """Return the server's /api/v3/status payload."""
         return await self._get("/api/v3/status", envelope=True)
 
     async def get_last_modified(self) -> dict[str, Any]:
+        """Return the server's per-collection last-modified timestamps."""
         return await self._get("/api/v3/lastModified", envelope=True)
 
     async def get_devicestatus(
@@ -39,6 +42,7 @@ class NightscoutV3Client:
         *,
         last_modified: int | None = None,
     ) -> list[dict[str, Any]]:
+        """Return the latest devicestatus documents, newest first."""
         params = [("limit", str(limit)), ("sort$desc", "date")]
         if last_modified is not None:
             params.append(("srvModified$gt", str(last_modified)))
@@ -52,6 +56,7 @@ class NightscoutV3Client:
         before_date: int | None = None,
         last_modified: int | None = None,
     ) -> list[dict[str, Any]]:
+        """Return CGM entries matching the given window, newest first."""
         params: list[tuple[str, str]] = [("limit", str(limit)), ("sort$desc", "date")]
         if since_date is not None:
             params.insert(0, ("date$gte", str(since_date)))
@@ -69,6 +74,7 @@ class NightscoutV3Client:
         since_date: int | None = None,
         last_modified: int | None = None,
     ) -> list[dict[str, Any]]:
+        """Return treatments matching the given filters, newest first."""
         params: list[tuple[str, str]] = []
         if event_type is not None:
             params.append(("eventType$eq", event_type))
@@ -80,6 +86,7 @@ class NightscoutV3Client:
         return await self._get_list("/api/v3/treatments", params)
 
     async def get_profile(self, *, latest: bool = True) -> dict[str, Any]:
+        """Return the latest profile document, or raise if none exists."""
         params = [("limit", "1"), ("sort$desc", "date")] if latest else []
         result = await self._get_list("/api/v3/profile", params)
         if not result:

@@ -17,6 +17,7 @@ PARALLEL_UPDATES = 0
 async def async_setup_entry(
     hass: HomeAssistant, entry: NightscoutConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
+    """Set up binary sensor entities for enabled features."""
     data = entry.runtime_data
     enabled = entry.options.get(OPT_ENABLED_FEATURES, {})
     entities: list[BinarySensorEntity] = []
@@ -33,11 +34,13 @@ class NightscoutBinarySensor(NightscoutEntity, BinarySensorEntity):
     """Coordinator-backed binary sensor."""
 
     def __init__(self, coordinator, feature: FeatureDef) -> None:
+        """Initialize the binary sensor for the given feature."""
         super().__init__(coordinator, feature)
         self._attr_device_class = feature.device_class
 
     @property
     def is_on(self) -> bool | None:
+        """Return True/False from the extracted feature value, or None."""
         val = self._extract()
         if val is None:
             return None
