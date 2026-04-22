@@ -138,7 +138,7 @@ async def test_options_stats_windows(hass, valid_caps) -> None:
         result["flow_id"], {"next_step_id": "stats"}
     )
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"stats_windows": [7, 14, 30]}
+        result["flow_id"], {"stats_windows": ["7", "14", "30"]}
     )
     assert result["type"].name == "CREATE_ENTRY"
     assert sorted(result["data"]["stats_windows"]) == [7, 14, 30]

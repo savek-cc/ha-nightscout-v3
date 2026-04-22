@@ -16,6 +16,11 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_URL
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+)
 import homeassistant.helpers.config_validation as cv
 
 from .api.auth import JwtManager
@@ -233,11 +238,14 @@ class NightscoutOptionsFlow(OptionsFlow):
             return self.async_create_entry(
                 title="", data={**self._entry.options, OPT_STATS_WINDOWS: chosen}
             )
-        current = list(self._entry.options.get(OPT_STATS_WINDOWS, [MANDATORY_STATS_WINDOW]))
+        current = [
+            str(w)
+            for w in self._entry.options.get(OPT_STATS_WINDOWS, [MANDATORY_STATS_WINDOW])
+        ]
         schema = vol.Schema(
             {
                 vol.Optional(OPT_STATS_WINDOWS, default=current): cv.multi_select(
-                    {w: f"{w}d" for w in ALLOWED_STATS_WINDOWS}
+                    {str(w): f"{w}d" for w in ALLOWED_STATS_WINDOWS}
                 )
             }
         )
@@ -248,24 +256,33 @@ class NightscoutOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         """Handle the thresholds step."""
         if user_input is not None:
-            return self.async_create_entry(title="", data={**self._entry.options, **user_input})
+            coerced = {k: int(v) for k, v in user_input.items()}
+            return self.async_create_entry(title="", data={**self._entry.options, **coerced})
         current = self._entry.options
         schema = vol.Schema(
             {
                 vol.Optional(
                     OPT_TIR_LOW, default=current.get(OPT_TIR_LOW, DEFAULT_TIR_LOW),
-                ): vol.All(int, vol.Range(min=40, max=120)),
+                ): NumberSelector(
+                    NumberSelectorConfig(min=40, max=120, step=1, mode=NumberSelectorMode.BOX, unit_of_measurement="mg/dL"),
+                ),
                 vol.Optional(
                     OPT_TIR_HIGH, default=current.get(OPT_TIR_HIGH, DEFAULT_TIR_HIGH),
-                ): vol.All(int, vol.Range(min=120, max=300)),
+                ): NumberSelector(
+                    NumberSelectorConfig(min=120, max=300, step=1, mode=NumberSelectorMode.BOX, unit_of_measurement="mg/dL"),
+                ),
                 vol.Optional(
                     OPT_TIR_VERY_LOW,
                     default=current.get(OPT_TIR_VERY_LOW, DEFAULT_TIR_VERY_LOW),
-                ): vol.All(int, vol.Range(min=30, max=80)),
+                ): NumberSelector(
+                    NumberSelectorConfig(min=30, max=80, step=1, mode=NumberSelectorMode.BOX, unit_of_measurement="mg/dL"),
+                ),
                 vol.Optional(
                     OPT_TIR_VERY_HIGH,
                     default=current.get(OPT_TIR_VERY_HIGH, DEFAULT_TIR_VERY_HIGH),
-                ): vol.All(int, vol.Range(min=180, max=400)),
+                ): NumberSelector(
+                    NumberSelectorConfig(min=180, max=400, step=1, mode=NumberSelectorMode.BOX, unit_of_measurement="mg/dL"),
+                ),
             }
         )
         return self.async_show_form(step_id="thresholds", data_schema=schema)
@@ -275,7 +292,8 @@ class NightscoutOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         """Handle the polling step."""
         if user_input is not None:
-            return self.async_create_entry(title="", data={**self._entry.options, **user_input})
+            coerced = {k: int(v) for k, v in user_input.items()}
+            return self.async_create_entry(title="", data={**self._entry.options, **coerced})
         current = self._entry.options
         schema = vol.Schema(
             {
@@ -284,20 +302,26 @@ class NightscoutOptionsFlow(OptionsFlow):
                     default=current.get(
                         OPT_POLL_FAST_SECONDS, DEFAULT_POLL_FAST_SECONDS,
                     ),
-                ): vol.All(int, vol.Range(min=30, max=600)),
+                ): NumberSelector(
+                    NumberSelectorConfig(min=30, max=600, step=10, mode=NumberSelectorMode.BOX, unit_of_measurement="s"),
+                ),
                 vol.Optional(
                     OPT_POLL_CHANGE_DETECT_MINUTES,
                     default=current.get(
                         OPT_POLL_CHANGE_DETECT_MINUTES,
                         DEFAULT_POLL_CHANGE_DETECT_MINUTES,
                     ),
-                ): vol.All(int, vol.Range(min=1, max=60)),
+                ): NumberSelector(
+                    NumberSelectorConfig(min=1, max=60, step=1, mode=NumberSelectorMode.BOX, unit_of_measurement="min"),
+                ),
                 vol.Optional(
                     OPT_POLL_STATS_MINUTES,
                     default=current.get(
                         OPT_POLL_STATS_MINUTES, DEFAULT_POLL_STATS_MINUTES,
                     ),
-                ): vol.All(int, vol.Range(min=5, max=240)),
+                ): NumberSelector(
+                    NumberSelectorConfig(min=5, max=240, step=5, mode=NumberSelectorMode.BOX, unit_of_measurement="min"),
+                ),
             }
         )
         return self.async_show_form(step_id="polling", data_schema=schema)
