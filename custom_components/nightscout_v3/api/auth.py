@@ -81,7 +81,7 @@ class JwtManager:
 
     async def _exchange_once(self, url: str) -> JwtState:
         try:
-            async with self._session.post(
+            async with self._session.get(
                 url, timeout=aiohttp.ClientTimeout(total=30)
             ) as resp:
                 if resp.status == 401:
@@ -98,10 +98,9 @@ class JwtManager:
                 f"Network error during JWT exchange: {type(exc).__name__}"
             ) from exc
 
-        result = body.get("result", {})
-        token = result.get("token")
-        exp = result.get("exp")
-        iat = result.get("iat")
+        token = body.get("token")
+        exp = body.get("exp")
+        iat = body.get("iat")
         if token is None or exp is None or iat is None:
             missing = [
                 name for name, value in (("token", token), ("exp", exp), ("iat", iat))

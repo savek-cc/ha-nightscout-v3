@@ -26,14 +26,14 @@ async def test_initial_exchange_stores_jwt(
 ) -> None:
     freezer.move_to("2026-04-21T00:00:00Z")
     with aioresponses() as m:
-        m.post(
+        m.get(
             f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
             payload=payload,
         )
         mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
         state = await mgr.initial_exchange()
-    assert state.token == payload["result"]["token"]
-    assert state.exp == payload["result"]["exp"]
+    assert state.token == payload["token"]
+    assert state.exp == payload["exp"]
 
 
 async def test_get_valid_jwt_refreshes_near_expiry(
@@ -41,7 +41,7 @@ async def test_get_valid_jwt_refreshes_near_expiry(
 ) -> None:
     freezer.move_to("2026-04-21T00:00:00Z")
     with aioresponses() as m:
-        m.post(
+        m.get(
             f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
             payload=payload,
             repeat=True,
@@ -49,16 +49,16 @@ async def test_get_valid_jwt_refreshes_near_expiry(
         mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
         await mgr.initial_exchange()
         # Advance to within refresh threshold
-        freezer.move_to(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(payload["result"]["exp"] - 1000)))
+        freezer.move_to(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(payload["exp"] - 1000)))
         jwt = await mgr.get_valid_jwt()
-    assert jwt == payload["result"]["token"]
+    assert jwt == payload["token"]
     # Called twice (initial + on-demand refresh)
     assert len(m.requests) >= 1
 
 
 async def test_initial_exchange_raises_auth_on_401(aiohttp_client_session) -> None:
     with aioresponses() as m:
-        m.post(
+        m.get(
             f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
             status=401,
             payload={"status": 401, "message": "unauthorized"},
@@ -79,11 +79,11 @@ async def test_refresh_retries_with_backoff_on_5xx(
     monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
 
     with aioresponses() as m:
-        m.post(f"{BASE_URL}/api/v2/authorization/request/{TOKEN}", status=502, repeat=3)
-        m.post(f"{BASE_URL}/api/v2/authorization/request/{TOKEN}", payload=payload)
+        m.get(f"{BASE_URL}/api/v2/authorization/request/{TOKEN}", status=502, repeat=3)
+        m.get(f"{BASE_URL}/api/v2/authorization/request/{TOKEN}", payload=payload)
         mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
         state = await mgr.initial_exchange()
-    assert state.token == payload["result"]["token"]
+    assert state.token == payload["token"]
     assert sleeps[:3] == [1, 2, 4]
 
 
@@ -94,7 +94,7 @@ async def test_refresh_gives_up_after_max_attempts(
 
     monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
     with aioresponses() as m:
-        m.post(f"{BASE_URL}/api/v2/authorization/request/{TOKEN}", status=502, repeat=True)
+        m.get(f"{BASE_URL}/api/v2/authorization/request/{TOKEN}", status=502, repeat=True)
         mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
         with pytest.raises(ApiError):
             await mgr.initial_exchange()
@@ -107,13 +107,13 @@ async def test_state_property_before_and_after_exchange(
     mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
     assert mgr.state is None
     with aioresponses() as m:
-        m.post(
+        m.get(
             f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
             payload=payload,
         )
         await mgr.initial_exchange()
     assert mgr.state is not None
-    assert mgr.state.token == payload["result"]["token"]
+    assert mgr.state.token == payload["token"]
 
 
 async def test_refresh_forces_new_exchange(
@@ -121,7 +121,7 @@ async def test_refresh_forces_new_exchange(
 ) -> None:
     """refresh() forces a new exchange regardless of current TTL."""
     with aioresponses() as m:
-        m.post(
+        m.get(
             f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
             payload=payload,
             repeat=True,
@@ -144,7 +144,7 @@ async def test_initial_exchange_raises_api_error_on_403(
 
     monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
     with aioresponses() as m:
-        m.post(
+        m.get(
             f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
             status=403,
             payload={"status": 403, "message": "forbidden"},
@@ -169,7 +169,7 @@ async def test_initial_exchange_raises_api_error_on_network_error(
 
     monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
     with aioresponses() as m:
-        m.post(
+        m.get(
             f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
             exception=aiohttp.ClientConnectionError("boom"),
             repeat=True,
@@ -193,9 +193,9 @@ async def test_initial_exchange_raises_api_error_on_malformed_jwt_body(
 
     monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
     with aioresponses() as m:
-        m.post(
+        m.get(
             f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
-            payload={"status": 200, "result": {"token": "foo"}},
+            payload={"token": "foo"},
             repeat=True,
         )
         mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
@@ -218,9 +218,9 @@ async def test_malformed_jwt_error_does_not_leak_token_body(
     )
     leaked_jwt = "eyJLEAKME.eyJhbGciOiJIUzI1NiJ9.SIGSIGSIG"
     with aioresponses() as m:
-        m.post(
+        m.get(
             f"{BASE_URL}/api/v2/authorization/request/{TOKEN}",
-            payload={"status": 200, "result": {"token": leaked_jwt, "iat": 0}},
+            payload={"token": leaked_jwt, "iat": 0},
             repeat=True,
         )
         mgr = JwtManager(aiohttp_client_session, BASE_URL, TOKEN)
