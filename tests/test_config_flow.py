@@ -92,3 +92,68 @@ async def test_user_step_duplicate_aborts(hass, valid_caps) -> None:
         )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+
+
+# --- options flow ---
+
+async def test_options_features_sub_step(hass, valid_caps) -> None:
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="uid1",
+        data={"url": "https://ns.example", "access_token": "t",
+              "capabilities": valid_caps.to_dict(), "capabilities_probed_at": 0},
+        options={"enabled_features": {"bg_current": True}, "stats_windows": [14]},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"].name == "MENU"
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "features"}
+    )
+    assert result["type"].name == "FORM"
+    assert result["step_id"] == "features"
+
+
+async def test_options_stats_windows(hass, valid_caps) -> None:
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id="uid2",
+        data={"url": "https://ns.example", "access_token": "t",
+              "capabilities": valid_caps.to_dict(), "capabilities_probed_at": 0},
+        options={"enabled_features": {}, "stats_windows": [14]},
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "stats"}
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"stats_windows": [7, 14, 30]}
+    )
+    assert result["type"].name == "CREATE_ENTRY"
+    assert sorted(result["data"]["stats_windows"]) == [7, 14, 30]
+
+
+async def test_options_rediscover_updates_capabilities(hass, valid_caps) -> None:
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    from unittest.mock import AsyncMock, patch, MagicMock
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id="uid3",
+        data={"url": "https://ns.example", "access_token": "t",
+              "capabilities": valid_caps.to_dict(), "capabilities_probed_at": 0},
+        options={"enabled_features": {}, "stats_windows": [14]},
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    with (
+        patch("custom_components.nightscout_v3.config_flow.JwtManager.initial_exchange",
+              new=AsyncMock(return_value=MagicMock(token="jwt", exp=9999999999, iat=0))),
+        patch("custom_components.nightscout_v3.config_flow.probe_capabilities",
+              new=AsyncMock(return_value=valid_caps)),
+    ):
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], {"next_step_id": "rediscover"}
+        )
+    assert result["type"].name == "CREATE_ENTRY"

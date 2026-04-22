@@ -188,4 +188,96 @@ class NightscoutOptionsFlow(OptionsFlow):
             menu_options=["features", "stats", "thresholds", "polling", "rediscover"],
         )
 
-    # Sub-steps implemented in Task 3.5
+    async def async_step_features(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        from .api.capabilities import ServerCapabilities
+
+        caps = ServerCapabilities.from_dict(self._entry.data[CONF_CAPABILITIES])
+        features = features_for_capabilities(caps)
+        current = dict(self._entry.options.get(OPT_ENABLED_FEATURES, {}))
+
+        if user_input is not None:
+            current.update({f.key: bool(user_input.get(f.key, False)) for f in features})
+            return self.async_create_entry(
+                title="", data={**self._entry.options, OPT_ENABLED_FEATURES: current}
+            )
+
+        schema: dict[Any, Any] = {}
+        for cat in Category:
+            for f in features:
+                if f.category != cat:
+                    continue
+                schema[vol.Optional(f.key, default=current.get(f.key, f.default_enabled))] = bool
+        return self.async_show_form(step_id="features", data_schema=vol.Schema(schema))
+
+    async def async_step_stats(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            chosen = sorted(set(int(w) for w in user_input.get(OPT_STATS_WINDOWS, [])) | {MANDATORY_STATS_WINDOW})
+            return self.async_create_entry(
+                title="", data={**self._entry.options, OPT_STATS_WINDOWS: chosen}
+            )
+        current = list(self._entry.options.get(OPT_STATS_WINDOWS, [MANDATORY_STATS_WINDOW]))
+        schema = vol.Schema(
+            {
+                vol.Optional(OPT_STATS_WINDOWS, default=current): cv.multi_select(
+                    {w: f"{w}d" for w in ALLOWED_STATS_WINDOWS}
+                )
+            }
+        )
+        return self.async_show_form(step_id="stats", data_schema=schema)
+
+    async def async_step_thresholds(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(title="", data={**self._entry.options, **user_input})
+        current = self._entry.options
+        schema = vol.Schema(
+            {
+                vol.Optional(OPT_TIR_LOW, default=current.get(OPT_TIR_LOW, DEFAULT_TIR_LOW)): vol.All(int, vol.Range(min=40, max=120)),
+                vol.Optional(OPT_TIR_HIGH, default=current.get(OPT_TIR_HIGH, DEFAULT_TIR_HIGH)): vol.All(int, vol.Range(min=120, max=300)),
+                vol.Optional(OPT_TIR_VERY_LOW, default=current.get(OPT_TIR_VERY_LOW, DEFAULT_TIR_VERY_LOW)): vol.All(int, vol.Range(min=30, max=80)),
+                vol.Optional(OPT_TIR_VERY_HIGH, default=current.get(OPT_TIR_VERY_HIGH, DEFAULT_TIR_VERY_HIGH)): vol.All(int, vol.Range(min=180, max=400)),
+            }
+        )
+        return self.async_show_form(step_id="thresholds", data_schema=schema)
+
+    async def async_step_polling(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(title="", data={**self._entry.options, **user_input})
+        current = self._entry.options
+        schema = vol.Schema(
+            {
+                vol.Optional(OPT_POLL_FAST_SECONDS, default=current.get(OPT_POLL_FAST_SECONDS, DEFAULT_POLL_FAST_SECONDS)): vol.All(int, vol.Range(min=30, max=600)),
+                vol.Optional(OPT_POLL_CHANGE_DETECT_MINUTES, default=current.get(OPT_POLL_CHANGE_DETECT_MINUTES, DEFAULT_POLL_CHANGE_DETECT_MINUTES)): vol.All(int, vol.Range(min=1, max=60)),
+                vol.Optional(OPT_POLL_STATS_MINUTES, default=current.get(OPT_POLL_STATS_MINUTES, DEFAULT_POLL_STATS_MINUTES)): vol.All(int, vol.Range(min=5, max=240)),
+            }
+        )
+        return self.async_show_form(step_id="polling", data_schema=schema)
+
+    async def async_step_rediscover(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        try:
+            session = async_get_clientsession(self.hass)
+            mgr = JwtManager(session, self._entry.data[CONF_URL], self._entry.data[CONF_ACCESS_TOKEN])
+            await mgr.initial_exchange()
+            client = NightscoutV3Client(session, self._entry.data[CONF_URL], mgr)
+            caps = await probe_capabilities(client)
+        except (AuthError, ApiError):
+            return self.async_abort(reason="cannot_connect")
+
+        self.hass.config_entries.async_update_entry(
+            self._entry,
+            data={
+                **self._entry.data,
+                CONF_CAPABILITIES: caps.to_dict(),
+                CONF_CAPABILITIES_PROBED_AT: caps.last_probed_at_ms,
+            },
+        )
+        return self.async_create_entry(title="", data=dict(self._entry.options))
