@@ -1,0 +1,14 @@
+{
+  "domain": "nightscout_v3",
+  "name": "Nightscout v3",
+  "codeowners": ["@savek-cc"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/savek-cc/ha-nightscout-v3",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/savek-cc/ha-nightscout-v3/issues",
+  "quality_scale": "silver",
+  "requirements": ["aiosqlite==0.20.0", "orjson==3.10.7"],
+  "version": "0.1.0"
+}

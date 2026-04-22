@@ -1,0 +1,74 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nightscout v3",
+        "description": "Connect a Nightscout v3 instance.",
+        "data": {
+          "url": "Server URL",
+          "access_token": "Access token"
+        },
+        "data_description": {
+          "url": "Base URL of your Nightscout server (e.g. https://my.nightscout.example).",
+          "access_token": "API token with at least `*:*:read` and `api:treatments:create` roles."
+        }
+      },
+      "customize": {
+        "title": "Select features",
+        "description": "Enable or disable individual features. Disabled features are hidden from the UI."
+      },
+      "stats": {
+        "title": "Statistics windows",
+        "description": "Pick which rolling statistics windows to compute. 14 days is always enabled."
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Nightscout v3",
+        "description": "The existing access token is no longer valid. Enter a new token.",
+        "data": { "access_token": "New access token" }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot reach the Nightscout server.",
+      "invalid_auth": "Token rejected by the server.",
+      "unknown": "Unexpected error; see logs."
+    },
+    "abort": {
+      "already_configured": "This Nightscout instance is already configured.",
+      "reauth_successful": "Re-authentication succeeded."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Nightscout v3 options",
+        "menu_options": {
+          "features": "Enable / disable features",
+          "stats": "Statistics windows",
+          "thresholds": "Time-in-range thresholds",
+          "polling": "Polling intervals",
+          "rediscover": "Re-probe server capabilities"
+        }
+      },
+      "features": { "title": "Features" },
+      "stats": { "title": "Statistics windows" },
+      "thresholds": {
+        "title": "Time-in-range thresholds",
+        "data": {
+          "tir_low_threshold_mgdl": "Low threshold (mg/dL)",
+          "tir_high_threshold_mgdl": "High threshold (mg/dL)",
+          "tir_very_low_threshold_mgdl": "Very low threshold (mg/dL)",
+          "tir_very_high_threshold_mgdl": "Very high threshold (mg/dL)"
+        }
+      },
+      "polling": {
+        "title": "Polling intervals",
+        "data": {
+          "poll_fast_seconds": "Fast cycle (s)",
+          "poll_change_detect_minutes": "Change-detect cycle (min)",
+          "poll_stats_minutes": "Statistics cycle (min)"
+        }
+      }
+    }
+  },
+  "entity": {}
+}

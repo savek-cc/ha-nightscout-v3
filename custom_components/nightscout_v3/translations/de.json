@@ -1,0 +1,74 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nightscout v3",
+        "description": "Eine Nightscout-v3-Instanz verbinden.",
+        "data": {
+          "url": "Server-URL",
+          "access_token": "Zugangstoken"
+        },
+        "data_description": {
+          "url": "Basis-URL des Nightscout-Servers (z. B. https://my.nightscout.example).",
+          "access_token": "API-Token mit mindestens `*:*:read` und `api:treatments:create`."
+        }
+      },
+      "customize": {
+        "title": "Features auswählen",
+        "description": "Einzelne Features ein- oder ausschalten. Deaktivierte Features werden in der UI ausgeblendet."
+      },
+      "stats": {
+        "title": "Statistik-Fenster",
+        "description": "Wähle die rollierenden Statistik-Fenster. 14 Tage ist Pflicht."
+      },
+      "reauth_confirm": {
+        "title": "Erneut anmelden — Nightscout v3",
+        "description": "Der Zugangstoken ist ungültig. Bitte neuen Token eingeben.",
+        "data": { "access_token": "Neuer Zugangstoken" }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nightscout-Server nicht erreichbar.",
+      "invalid_auth": "Token vom Server abgelehnt.",
+      "unknown": "Unerwarteter Fehler; siehe Log."
+    },
+    "abort": {
+      "already_configured": "Diese Nightscout-Instanz ist bereits konfiguriert.",
+      "reauth_successful": "Erneute Anmeldung erfolgreich."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Nightscout v3 — Optionen",
+        "menu_options": {
+          "features": "Features aktivieren / deaktivieren",
+          "stats": "Statistik-Fenster",
+          "thresholds": "Time-in-Range-Schwellen",
+          "polling": "Abfrage-Intervalle",
+          "rediscover": "Server-Capabilities neu prüfen"
+        }
+      },
+      "features": { "title": "Features" },
+      "stats": { "title": "Statistik-Fenster" },
+      "thresholds": {
+        "title": "Time-in-Range-Schwellen",
+        "data": {
+          "tir_low_threshold_mgdl": "Untere Grenze (mg/dL)",
+          "tir_high_threshold_mgdl": "Obere Grenze (mg/dL)",
+          "tir_very_low_threshold_mgdl": "Sehr niedrig (mg/dL)",
+          "tir_very_high_threshold_mgdl": "Sehr hoch (mg/dL)"
+        }
+      },
+      "polling": {
+        "title": "Abfrage-Intervalle",
+        "data": {
+          "poll_fast_seconds": "Fast-Cycle (s)",
+          "poll_change_detect_minutes": "Change-Detect-Cycle (min)",
+          "poll_stats_minutes": "Statistik-Cycle (min)"
+        }
+      }
+    }
+  },
+  "entity": {}
+}
