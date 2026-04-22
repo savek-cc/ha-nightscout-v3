@@ -82,6 +82,19 @@ Full setup walkthrough: **[docs/dashboard-setup.md](docs/dashboard-setup.md)**.
 
 Three copy-paste snippets live under `dashboards/examples/`.
 
+## Removing the integration
+
+1. **Settings → Devices & Services → Nightscout v3 → ⋯ → Delete**. All
+   config entries, entities, and the device go away.
+2. If you used the shipped dashboard, remove the
+   `lovelace.dashboards.nightscout` block from `configuration.yaml` (or
+   un-register it from **Settings → Dashboards**).
+3. In HACS → **Integrations → Nightscout v3 → ⋯ → Remove** to uninstall
+   the integration files. Restart HA.
+
+No external state is left behind; the SQLite history store lives under the
+integration's own `.storage` dir and is removed with the config entry.
+
 ## Reauthentication
 
 If your token is rotated or the server rejects the JWT, the integration
