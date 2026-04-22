@@ -99,3 +99,21 @@ async def test_api_error_becomes_update_failed(
     coord = NightscoutCoordinator(hass, mock_client, _caps(), store, entry)
     with pytest.raises(UpdateFailed):
         await coord._async_update_data()
+
+
+async def test_agp_summary_exposes_per_hour_percentile_lists(
+    hass: HomeAssistant, mock_client, store, entry
+) -> None:
+    """The AGP dashboard relies on p{5,25,50,75,95}_by_hour attributes — keep them in sync."""
+    coord = NightscoutCoordinator(hass, mock_client, _caps(), store, entry)
+    await coord.async_config_entry_first_refresh()
+    await coord._stats_cycle()
+    agp = coord._stats[14]["agp_summary"]
+    assert isinstance(agp, dict)
+    for key in ("p5_by_hour", "p25_by_hour", "p50_by_hour", "p75_by_hour", "p95_by_hour"):
+        assert key in agp, f"missing {key}"
+        assert isinstance(agp[key], list)
+        assert len(agp[key]) == 24
+    # raw rows stay accessible for advanced users
+    assert isinstance(agp.get("items"), list)
+    assert len(agp["items"]) == 24

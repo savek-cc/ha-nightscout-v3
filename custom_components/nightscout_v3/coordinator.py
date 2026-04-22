@@ -214,7 +214,16 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                                   tir_low=low, tir_high=high,
                                   tir_very_low=vlow, tir_very_high=vhigh)
             payload["hourly_profile_summary"] = payload["hourly_profile"]
-            payload["agp_summary"] = payload["agp_percentiles"]
+            agp_rows = payload["agp_percentiles"]
+            payload["agp_summary"] = {
+                "sample_count": sum(int(row.get("n", 0)) for row in agp_rows),
+                "items": agp_rows,
+                "p5_by_hour": [row["p5"] for row in agp_rows],
+                "p25_by_hour": [row["p25"] for row in agp_rows],
+                "p50_by_hour": [row["p50"] for row in agp_rows],
+                "p75_by_hour": [row["p75"] for row in agp_rows],
+                "p95_by_hour": [row["p95"] for row in agp_rows],
+            }
             self._stats[w] = payload
             await self._store.set_stats_cache(w, payload)
         self._stats_dirty = False

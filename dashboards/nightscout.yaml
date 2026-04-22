@@ -95,9 +95,9 @@ views:
     icon: mdi:chart-bell-curve
     cards:
       # The stat_agp_14d sensor exposes hourly percentiles as attributes
-      # (p05/p25/p50/p75/p95 keyed by hour 0-23). It is disabled by default
-      # in the integration — enable it in HA's entity registry to populate
-      # this view. For a shipped chart, point apexcharts-card at the attributes.
+      # (p5_by_hour, p25_by_hour, p50_by_hour, p75_by_hour, p95_by_hour —
+      # each a 24-entry list indexed by hour 0-23). The sensor is disabled by
+      # default — enable it in HA's entity registry to populate this view.
       - type: entity
         entity: sensor.nightscout_v3_stat_agp_14d
         name: AGP-Zusammenfassung (14 d)
