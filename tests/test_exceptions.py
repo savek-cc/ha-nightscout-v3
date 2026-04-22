@@ -2,14 +2,12 @@
 from custom_components.nightscout_v3.api.exceptions import (
     ApiError,
     AuthError,
-    NotReady,
 )
 
 
 def test_exception_hierarchy() -> None:
     """All exceptions inherit from ApiError."""
     assert issubclass(AuthError, ApiError)
-    assert issubclass(NotReady, ApiError)
 
 
 def test_api_error_carries_status() -> None:

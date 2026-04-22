@@ -15,7 +15,3 @@ class AuthError(ApiError):
 
     def __init__(self, message: str, *, status: int = 401) -> None:
         super().__init__(message, status=status)
-
-
-class NotReady(ApiError):
-    """Raised for transient errors (5xx, timeout, DNS)."""
