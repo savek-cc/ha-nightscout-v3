@@ -5,8 +5,12 @@ rules:
     comment: The integration does not register services in v1 (careportal writes are v2 roadmap).
   appropriate-polling: done
   brands:
-    status: todo
-    comment: PR to home-assistant/brands required before HACS listing.
+    status: exempt
+    comment: >
+      Custom component distributed exclusively via HACS. The
+      home-assistant/brands repository is for integrations shipped in
+      Home Assistant core; a HACS integration publishes its brand
+      assets through the HACS repository itself.
   common-modules: done
   config-flow-test-coverage: done
   config-flow: done
