@@ -9,7 +9,19 @@ from homeassistant.core import HomeAssistant
 
 from .models import NightscoutConfigEntry
 
-_TO_REDACT = {"url", "access_token", "api_secret", "identifier", "sub", "token"}
+_TO_REDACT = {
+    "url",
+    "access_token",
+    "api_secret",
+    "identifier",
+    "sub",
+    "token",
+    "reason",
+    "notes",
+    "note",
+    "last_note",
+    "enteredBy",
+}
 
 
 async def async_get_config_entry_diagnostics(

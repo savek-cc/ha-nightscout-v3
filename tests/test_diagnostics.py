@@ -49,6 +49,46 @@ async def test_diagnostics_redacts_url_and_token(hass: HomeAssistant, caps) -> N
     assert diag["runtime"]["coordinator"]["tick"] == 5
 
 
+async def test_diagnostics_redacts_reason_and_notes(hass: HomeAssistant, caps) -> None:
+    """Free-form loop.reason and care.last_note must not leak.
+
+    Regression test for the final release review C-2: the README and
+    architecture doc promise `reason` and `notes` are redacted. This
+    pins the invariant on the actual diagnostics output.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id="uid-diag-reason", title="Test",
+        data={"url": "https://x.example", "access_token": "t",
+              "capabilities": caps.to_dict(), "capabilities_probed_at": 0},
+        options={"enabled_features": {}, "stats_windows": [14]},
+    )
+    entry.add_to_hass(hass)
+
+    leak_reason = "LEAK_REASON_ISF_1.25_ratio_0.8"
+    leak_note = "LEAK_NOTE_private_message"
+    leak_uploader = "LEAK_UPLOADER_phone_name"
+
+    with patch(
+        "custom_components.nightscout_v3.diagnostics._collect_runtime",
+        return_value={
+            "coordinator": {"tick": 1},
+            "snapshot": {
+                "loop": {"reason": leak_reason},
+                "care": {"last_note": leak_note},
+                "uploader": {"enteredBy": leak_uploader},
+            },
+        },
+    ):
+        diag = await async_get_config_entry_diagnostics(hass, entry)
+
+    dumped = str(diag)
+    assert leak_reason not in dumped
+    assert leak_note not in dumped
+    assert leak_uploader not in dumped
+    assert diag["runtime"]["snapshot"]["loop"]["reason"] == "**REDACTED**"
+    assert diag["runtime"]["snapshot"]["care"]["last_note"] == "**REDACTED**"
+
+
 def test_collect_runtime_no_runtime_data() -> None:
     entry = MagicMock()
     entry.runtime_data = None
