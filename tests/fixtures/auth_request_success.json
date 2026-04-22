@@ -1,0 +1,9 @@
+{
+  "status": 200,
+  "result": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.anonymized.signature",
+    "sub": "homeassistant",
+    "iat": 1745000000,
+    "exp": 1745028800
+  }
+}
