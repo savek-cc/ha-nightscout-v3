@@ -1,0 +1,144 @@
+{
+  "entity": {
+    "sensor": {
+      "bg_current": {
+        "default": "mdi:water"
+      },
+      "bg_delta": {
+        "default": "mdi:plus-minus-variant"
+      },
+      "bg_direction": {
+        "default": "mdi:arrow-right"
+      },
+      "bg_stale_minutes": {
+        "default": "mdi:clock-alert-outline"
+      },
+      "bg_trend_arrow": {
+        "default": "mdi:arrow-top-right"
+      },
+      "care_bage_days": {
+        "default": "mdi:battery"
+      },
+      "care_cage_days": {
+        "default": "mdi:bandage"
+      },
+      "care_carbs_today": {
+        "default": "mdi:food-apple-outline"
+      },
+      "care_iage_days": {
+        "default": "mdi:needle"
+      },
+      "care_last_meal_carbs": {
+        "default": "mdi:food-apple"
+      },
+      "care_last_note": {
+        "default": "mdi:note-outline"
+      },
+      "care_sage_days": {
+        "default": "mdi:radar"
+      },
+      "loop_activity": {
+        "default": "mdi:pulse"
+      },
+      "loop_basaliob": {
+        "default": "mdi:chart-line"
+      },
+      "loop_cob": {
+        "default": "mdi:food-apple"
+      },
+      "loop_eventual_bg": {
+        "default": "mdi:crystal-ball"
+      },
+      "loop_iob": {
+        "default": "mdi:needle"
+      },
+      "loop_last_enacted_age_minutes": {
+        "default": "mdi:clock-outline"
+      },
+      "loop_mode": {
+        "default": "mdi:refresh-auto"
+      },
+      "loop_pred_bgs": {
+        "default": "mdi:chart-timeline-variant"
+      },
+      "loop_reason": {
+        "default": "mdi:message-text-outline"
+      },
+      "loop_sensitivity_ratio": {
+        "default": "mdi:scale-balance"
+      },
+      "loop_target_bg": {
+        "default": "mdi:target"
+      },
+      "mdi:alert-circle": {
+        "default": "mdi:alert-circle"
+      },
+      "mdi:alert-decagram": {
+        "default": "mdi:alert-decagram"
+      },
+      "mdi:arrow-down-bold": {
+        "default": "mdi:arrow-down-bold"
+      },
+      "mdi:arrow-down-thin-circle-outline": {
+        "default": "mdi:arrow-down-thin-circle-outline"
+      },
+      "mdi:arrow-up-bold": {
+        "default": "mdi:arrow-up-bold"
+      },
+      "mdi:arrow-up-thin-circle-outline": {
+        "default": "mdi:arrow-up-thin-circle-outline"
+      },
+      "mdi:chart-areaspline": {
+        "default": "mdi:chart-areaspline"
+      },
+      "mdi:chart-bell-curve": {
+        "default": "mdi:chart-bell-curve"
+      },
+      "mdi:chart-line": {
+        "default": "mdi:chart-line"
+      },
+      "mdi:diabetes": {
+        "default": "mdi:diabetes"
+      },
+      "mdi:sigma": {
+        "default": "mdi:sigma"
+      },
+      "mdi:timer-check": {
+        "default": "mdi:timer-check"
+      },
+      "mdi:variable": {
+        "default": "mdi:variable"
+      },
+      "pump_active_profile": {
+        "default": "mdi:account-cog"
+      },
+      "pump_base_basal": {
+        "default": "mdi:chart-line"
+      },
+      "pump_battery": {
+        "default": "mdi:battery"
+      },
+      "pump_last_bolus_amount": {
+        "default": "mdi:needle"
+      },
+      "pump_last_bolus_time": {
+        "default": "mdi:clock-outline"
+      },
+      "pump_reservoir": {
+        "default": "mdi:water-pump"
+      },
+      "pump_status": {
+        "default": "mdi:information-outline"
+      },
+      "pump_temp_basal_rate": {
+        "default": "mdi:chart-line-variant"
+      },
+      "pump_temp_basal_remaining": {
+        "default": "mdi:timer-sand"
+      },
+      "uploader_battery": {
+        "default": "mdi:cellphone"
+      }
+    }
+  }
+}

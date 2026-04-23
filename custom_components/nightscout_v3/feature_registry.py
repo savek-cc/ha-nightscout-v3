@@ -8,7 +8,7 @@ from enum import StrEnum
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import PERCENTAGE, Platform, UnitOfTime
+from homeassistant.const import PERCENTAGE, EntityCategory, Platform, UnitOfTime
 
 from .api.capabilities import ServerCapabilities
 
@@ -26,7 +26,13 @@ class Category(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class FeatureDef:
-    """One feature that can become an entity."""
+    """One feature that can become an entity.
+
+    `device_class` holds the appropriate SensorDeviceClass /
+    BinarySensorDeviceClass value for the target platform, or None.
+    Icons are no longer stored here — they live in icons.json via the
+    `translation_key` (Gold rule icon-translations).
+    """
 
     key: str
     category: Category
@@ -35,10 +41,10 @@ class FeatureDef:
     default_enabled: bool
     translation_key: str
     extractor: str  # dotted path into coordinator data (documented in coordinator.py)
-    device_class: str | None = None
-    state_class: str | None = None
+    device_class: SensorDeviceClass | BinarySensorDeviceClass | None = None
+    state_class: SensorStateClass | None = None
     unit: str | None = None
-    icon: str | None = None
+    entity_category: EntityCategory | None = None
     translation_placeholders: dict[str, str] | None = None
 
 
@@ -70,7 +76,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "bg.current_sgv",
         device_class=None,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:water",
     ),
     FeatureDef(
         "bg_delta",
@@ -81,7 +86,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "bg_delta",
         "bg.delta_mgdl",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:plus-minus-variant",
     ),
     FeatureDef(
         "bg_direction",
@@ -91,7 +95,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         True,
         "bg_direction",
         "bg.direction",
-        icon="mdi:arrow-right",
     ),
     FeatureDef(
         "bg_trend_arrow",
@@ -101,7 +104,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         True,
         "bg_trend_arrow",
         "bg.trend_arrow",
-        icon="mdi:arrow-top-right",
     ),
     FeatureDef(
         "bg_stale_minutes",
@@ -113,7 +115,7 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "bg.stale_minutes",
         state_class=SensorStateClass.MEASUREMENT,
         unit=UnitOfTime.MINUTES,
-        icon="mdi:clock-alert-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     # -------- PUMP (spec §4.2) --------
     FeatureDef(
@@ -126,7 +128,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "pump.reservoir",
         state_class=SensorStateClass.MEASUREMENT,
         unit="U",
-        icon="mdi:water-pump",
     ),
     FeatureDef(
         "pump_battery",
@@ -139,7 +140,7 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         unit=PERCENTAGE,
-        icon="mdi:battery",
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     FeatureDef(
         "pump_status",
@@ -149,7 +150,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         True,
         "pump_status",
         "pump.status_text",
-        icon="mdi:information-outline",
     ),
     FeatureDef(
         "pump_base_basal",
@@ -161,7 +161,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "pump.base_basal",
         state_class=SensorStateClass.MEASUREMENT,
         unit="U/h",
-        icon="mdi:chart-line",
     ),
     FeatureDef(
         "pump_temp_basal_rate",
@@ -173,7 +172,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "pump.temp_basal_rate",
         state_class=SensorStateClass.MEASUREMENT,
         unit="U/h",
-        icon="mdi:chart-line-variant",
     ),
     FeatureDef(
         "pump_temp_basal_remaining",
@@ -185,7 +183,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "pump.temp_basal_remaining",
         state_class=SensorStateClass.MEASUREMENT,
         unit=UnitOfTime.MINUTES,
-        icon="mdi:timer-sand",
     ),
     FeatureDef(
         "pump_active_profile",
@@ -195,7 +192,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         True,
         "pump_active_profile",
         "pump.active_profile",
-        icon="mdi:account-cog",
     ),
     FeatureDef(
         "pump_last_bolus_time",
@@ -206,7 +202,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "pump_last_bolus_time",
         "pump.last_bolus_time",
         device_class=SensorDeviceClass.TIMESTAMP,
-        icon="mdi:clock-outline",
     ),
     FeatureDef(
         "pump_last_bolus_amount",
@@ -218,7 +213,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "pump.last_bolus_amount",
         state_class=SensorStateClass.MEASUREMENT,
         unit="U",
-        icon="mdi:needle",
     ),
     # -------- LOOP (spec §4.3) --------
     FeatureDef(
@@ -229,7 +223,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         True,
         "loop_mode",
         "loop.mode",
-        icon="mdi:refresh-auto",
     ),
     FeatureDef(
         "loop_active",
@@ -250,7 +243,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "loop_eventual_bg",
         "loop.eventual_bg",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:crystal-ball",
     ),
     FeatureDef(
         "loop_target_bg",
@@ -261,7 +253,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "loop_target_bg",
         "loop.target_bg",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:target",
     ),
     FeatureDef(
         "loop_iob",
@@ -273,7 +264,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "loop.iob",
         state_class=SensorStateClass.MEASUREMENT,
         unit="U",
-        icon="mdi:needle",
     ),
     FeatureDef(
         "loop_basaliob",
@@ -285,7 +275,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "loop.basaliob",
         state_class=SensorStateClass.MEASUREMENT,
         unit="U",
-        icon="mdi:chart-line",
     ),
     FeatureDef(
         "loop_activity",
@@ -296,7 +285,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "loop_activity",
         "loop.activity",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:pulse",
     ),
     FeatureDef(
         "loop_cob",
@@ -308,7 +296,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "loop.cob",
         state_class=SensorStateClass.MEASUREMENT,
         unit="g",
-        icon="mdi:food-apple",
     ),
     FeatureDef(
         "loop_sensitivity_ratio",
@@ -319,7 +306,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "loop_sensitivity_ratio",
         "loop.sensitivity_ratio",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:scale-balance",
     ),
     FeatureDef(
         "loop_reason",
@@ -329,7 +315,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         False,
         "loop_reason",
         "loop.reason",
-        icon="mdi:message-text-outline",
     ),
     # Off by default: the state is always "unknown" (pred_bgs is a dict
     # surfaced via extra_state_attributes for apexcharts-card consumers).
@@ -342,7 +327,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         False,
         "loop_pred_bgs",
         "loop.pred_bgs",
-        icon="mdi:chart-timeline-variant",
     ),
     FeatureDef(
         "loop_last_enacted_age_minutes",
@@ -354,7 +338,7 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "loop.last_enacted_age_minutes",
         state_class=SensorStateClass.MEASUREMENT,
         unit=UnitOfTime.MINUTES,
-        icon="mdi:clock-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     # -------- CAREPORTAL read-only (spec §4.4) --------
     FeatureDef(
@@ -367,7 +351,7 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "care.sage_days",
         state_class=SensorStateClass.MEASUREMENT,
         unit=UnitOfTime.DAYS,
-        icon="mdi:radar",
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     FeatureDef(
         "care_iage_days",
@@ -379,7 +363,7 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "care.iage_days",
         state_class=SensorStateClass.MEASUREMENT,
         unit=UnitOfTime.DAYS,
-        icon="mdi:needle",
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     FeatureDef(
         "care_cage_days",
@@ -391,7 +375,7 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "care.cage_days",
         state_class=SensorStateClass.MEASUREMENT,
         unit=UnitOfTime.DAYS,
-        icon="mdi:bandage",
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     FeatureDef(
         "care_bage_days",
@@ -403,7 +387,7 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "care.bage_days",
         state_class=SensorStateClass.MEASUREMENT,
         unit=UnitOfTime.DAYS,
-        icon="mdi:battery",
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     FeatureDef(
         "care_last_meal_carbs",
@@ -415,7 +399,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "care.last_meal_carbs",
         state_class=SensorStateClass.MEASUREMENT,
         unit="g",
-        icon="mdi:food-apple",
     ),
     FeatureDef(
         "care_carbs_today",
@@ -427,7 +410,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         "care.carbs_today",
         state_class=SensorStateClass.TOTAL,
         unit="g",
-        icon="mdi:food-apple-outline",
     ),
     FeatureDef(
         "care_last_note",
@@ -437,7 +419,6 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         False,
         "care_last_note",
         "care.last_note",
-        icon="mdi:note-outline",
     ),
     # -------- UPLOADER (spec §4.6) --------
     FeatureDef(
@@ -451,7 +432,7 @@ FEATURE_REGISTRY: list[FeatureDef] = [
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         unit=PERCENTAGE,
-        icon="mdi:cellphone",
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     FeatureDef(
         "uploader_online",
@@ -496,7 +477,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             f"stats.{w}d.gmi_percent",
             state_class=SensorStateClass.MEASUREMENT,
             unit=PERCENTAGE,
-            icon="mdi:diabetes",
             translation_placeholders=placeholders,
         ),
         FeatureDef(
@@ -509,7 +489,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             f"stats.{w}d.hba1c_dcct_percent",
             state_class=SensorStateClass.MEASUREMENT,
             unit=PERCENTAGE,
-            icon="mdi:diabetes",
             translation_placeholders=placeholders,
         ),
         FeatureDef(
@@ -522,7 +501,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             f"stats.{w}d.tir_in_range_percent",
             state_class=SensorStateClass.MEASUREMENT,
             unit=PERCENTAGE,
-            icon="mdi:timer-check",
             translation_placeholders=placeholders,
         ),
         FeatureDef(
@@ -535,7 +513,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             f"stats.{w}d.tir_low_percent",
             state_class=SensorStateClass.MEASUREMENT,
             unit=PERCENTAGE,
-            icon="mdi:arrow-down-bold",
             translation_placeholders=placeholders,
         ),
         FeatureDef(
@@ -548,7 +525,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             f"stats.{w}d.tir_very_low_percent",
             state_class=SensorStateClass.MEASUREMENT,
             unit=PERCENTAGE,
-            icon="mdi:alert-circle",
             translation_placeholders=placeholders,
         ),
         FeatureDef(
@@ -561,7 +537,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             f"stats.{w}d.tir_high_percent",
             state_class=SensorStateClass.MEASUREMENT,
             unit=PERCENTAGE,
-            icon="mdi:arrow-up-bold",
             translation_placeholders=placeholders,
         ),
         FeatureDef(
@@ -574,7 +549,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             f"stats.{w}d.tir_very_high_percent",
             state_class=SensorStateClass.MEASUREMENT,
             unit=PERCENTAGE,
-            icon="mdi:alert-decagram",
             translation_placeholders=placeholders,
         ),
         FeatureDef(
@@ -586,7 +560,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             "stat_mean",
             f"stats.{w}d.mean_mgdl",
             state_class=SensorStateClass.MEASUREMENT,
-            icon="mdi:sigma",
             translation_placeholders=placeholders,
         ),
         FeatureDef(
@@ -598,7 +571,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             "stat_sd",
             f"stats.{w}d.sd_mgdl",
             state_class=SensorStateClass.MEASUREMENT,
-            icon="mdi:chart-bell-curve",
             translation_placeholders=placeholders,
         ),
         FeatureDef(
@@ -611,7 +583,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             f"stats.{w}d.cv_percent",
             state_class=SensorStateClass.MEASUREMENT,
             unit=PERCENTAGE,
-            icon="mdi:variable",
             translation_placeholders=placeholders,
         ),
         FeatureDef(
@@ -623,7 +594,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             "stat_lbgi",
             f"stats.{w}d.lbgi",
             state_class=SensorStateClass.MEASUREMENT,
-            icon="mdi:arrow-down-thin-circle-outline",
             translation_placeholders=placeholders,
         ),
         FeatureDef(
@@ -635,7 +605,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             "stat_hbgi",
             f"stats.{w}d.hbgi",
             state_class=SensorStateClass.MEASUREMENT,
-            icon="mdi:arrow-up-thin-circle-outline",
             translation_placeholders=placeholders,
         ),
         FeatureDef(
@@ -646,7 +615,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             False,
             "stat_hourly_profile",
             f"stats.{w}d.hourly_profile_summary",
-            icon="mdi:chart-line",
             translation_placeholders=placeholders,
         ),
         FeatureDef(
@@ -657,7 +625,6 @@ def stats_feature_defs(window_days: int) -> list[FeatureDef]:
             False,
             "stat_agp",
             f"stats.{w}d.agp_summary",
-            icon="mdi:chart-areaspline",
             translation_placeholders=placeholders,
         ),
     ]

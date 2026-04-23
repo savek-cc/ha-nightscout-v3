@@ -231,7 +231,8 @@ class NightscoutOptionsFlow(OptionsFlow):
                 title="", data={**self.config_entry.options, OPT_STATS_WINDOWS: chosen}
             )
         current = [
-            str(w) for w in self.config_entry.options.get(OPT_STATS_WINDOWS, [MANDATORY_STATS_WINDOW])
+            str(w)
+            for w in self.config_entry.options.get(OPT_STATS_WINDOWS, [MANDATORY_STATS_WINDOW])
         ]
         schema = vol.Schema(
             {

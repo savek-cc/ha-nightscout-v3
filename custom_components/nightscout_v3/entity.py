@@ -28,7 +28,8 @@ class NightscoutEntity(CoordinatorEntity["NightscoutCoordinator"]):
         self._attr_translation_key = feature.translation_key
         if feature.translation_placeholders:
             self._attr_translation_placeholders = dict(feature.translation_placeholders)
-        self._attr_icon = feature.icon
+        if feature.entity_category is not None:
+            self._attr_entity_category = feature.entity_category
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
             manufacturer=MANUFACTURER,

@@ -131,7 +131,8 @@ async def _prepare_history_db_path(hass: HomeAssistant, entry_id: str) -> Path:
             old_path.rename(new_path)
             _LOGGER.info(
                 "Migrated history DB from %s to %s (out of reserved .storage/)",
-                old_path, new_path,
+                old_path,
+                new_path,
             )
 
     await hass.async_add_executor_job(_migrate_on_disk)
