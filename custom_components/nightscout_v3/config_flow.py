@@ -184,15 +184,11 @@ class NightscoutConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         """Return the options flow for this integration."""
-        return NightscoutOptionsFlow(config_entry)
+        return NightscoutOptionsFlow()
 
 
 class NightscoutOptionsFlow(OptionsFlow):
-    """Options: menu + sub-steps (Task 3.5 fills all branches)."""
-
-    def __init__(self, entry: ConfigEntry) -> None:
-        """Initialize the Nightscout options flow."""
-        self._entry = entry
+    """Options: menu + sub-steps."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the init step."""
@@ -207,14 +203,14 @@ class NightscoutOptionsFlow(OptionsFlow):
         """Handle the features step."""
         from .api.capabilities import ServerCapabilities
 
-        caps = ServerCapabilities.from_dict(self._entry.data[CONF_CAPABILITIES])
+        caps = ServerCapabilities.from_dict(self.config_entry.data[CONF_CAPABILITIES])
         features = features_for_capabilities(caps)
-        current = dict(self._entry.options.get(OPT_ENABLED_FEATURES, {}))
+        current = dict(self.config_entry.options.get(OPT_ENABLED_FEATURES, {}))
 
         if user_input is not None:
             current.update({f.key: bool(user_input.get(f.key, False)) for f in features})
             return self.async_create_entry(
-                title="", data={**self._entry.options, OPT_ENABLED_FEATURES: current}
+                title="", data={**self.config_entry.options, OPT_ENABLED_FEATURES: current}
             )
 
         schema: dict[Any, Any] = {}
@@ -232,10 +228,10 @@ class NightscoutOptionsFlow(OptionsFlow):
                 {int(w) for w in user_input.get(OPT_STATS_WINDOWS, [])} | {MANDATORY_STATS_WINDOW}
             )
             return self.async_create_entry(
-                title="", data={**self._entry.options, OPT_STATS_WINDOWS: chosen}
+                title="", data={**self.config_entry.options, OPT_STATS_WINDOWS: chosen}
             )
         current = [
-            str(w) for w in self._entry.options.get(OPT_STATS_WINDOWS, [MANDATORY_STATS_WINDOW])
+            str(w) for w in self.config_entry.options.get(OPT_STATS_WINDOWS, [MANDATORY_STATS_WINDOW])
         ]
         schema = vol.Schema(
             {
@@ -252,8 +248,8 @@ class NightscoutOptionsFlow(OptionsFlow):
         """Handle the thresholds step."""
         if user_input is not None:
             coerced = {k: int(v) for k, v in user_input.items()}
-            return self.async_create_entry(title="", data={**self._entry.options, **coerced})
-        current = self._entry.options
+            return self.async_create_entry(title="", data={**self.config_entry.options, **coerced})
+        current = self.config_entry.options
         schema = vol.Schema(
             {
                 vol.Optional(
@@ -314,8 +310,8 @@ class NightscoutOptionsFlow(OptionsFlow):
         """Handle the polling step."""
         if user_input is not None:
             coerced = {k: int(v) for k, v in user_input.items()}
-            return self.async_create_entry(title="", data={**self._entry.options, **coerced})
-        current = self._entry.options
+            return self.async_create_entry(title="", data={**self.config_entry.options, **coerced})
+        current = self.config_entry.options
         schema = vol.Schema(
             {
                 vol.Optional(
@@ -373,8 +369,8 @@ class NightscoutOptionsFlow(OptionsFlow):
         """Handle the rediscover step."""
         try:
             session = async_get_clientsession(self.hass)
-            url = self._entry.data[CONF_URL]
-            mgr = JwtManager(session, url, self._entry.data[CONF_ACCESS_TOKEN])
+            url = self.config_entry.data[CONF_URL]
+            mgr = JwtManager(session, url, self.config_entry.data[CONF_ACCESS_TOKEN])
             await mgr.initial_exchange()
             client = NightscoutV3Client(session, url, mgr)
             caps = await probe_capabilities(client)
@@ -382,11 +378,16 @@ class NightscoutOptionsFlow(OptionsFlow):
             return self.async_abort(reason="cannot_connect")
 
         self.hass.config_entries.async_update_entry(
-            self._entry,
+            self.config_entry,
             data={
-                **self._entry.data,
+                **self.config_entry.data,
                 CONF_CAPABILITIES: caps.to_dict(),
                 CONF_CAPABILITIES_PROBED_AT: caps.last_probed_at_ms,
             },
         )
-        return self.async_create_entry(title="", data=dict(self._entry.options))
+        # Capabilities just changed: the entity platforms need to re-read
+        # FeatureDef.capability() with the new ServerCapabilities, so we
+        # reload the config entry. Without this the stale feature set
+        # persists until HA restart or a manual reload.
+        self.hass.config_entries.async_schedule_reload(self.config_entry.entry_id)
+        return self.async_create_entry(title="", data=dict(self.config_entry.options))
