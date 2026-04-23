@@ -104,7 +104,10 @@ def test_available_false_when_coordinator_down(monkeypatch) -> None:
     assert ent.available is False
 
 
-def test_available_false_when_value_missing(monkeypatch) -> None:
+def test_available_true_when_value_missing_but_coordinator_ok(monkeypatch) -> None:
+    """Regression: availability must track coordinator success only; None values
+    are a legitimate "no reading yet" state and surface as `unknown`, not
+    `unavailable`."""
     f = _feature("bg_current")
     coord = _coordinator({"bg": {}})
     monkeypatch.setattr(
@@ -117,7 +120,8 @@ def test_available_false_when_value_missing(monkeypatch) -> None:
         "homeassistant.helpers.update_coordinator.CoordinatorEntity.available",
         property(lambda self: self.coordinator.last_update_success),
     )
-    assert ent.available is False
+    assert ent.available is True
+    assert ent._extract() is None
 
 
 def test_extract_returns_none_midtraversal(monkeypatch) -> None:
@@ -133,9 +137,14 @@ def test_extract_returns_none_midtraversal(monkeypatch) -> None:
     assert ent._extract() is None
 
 
-def test_extract_walks_attribute_path(monkeypatch) -> None:
+def test_extract_returns_none_for_non_dict_payload(monkeypatch) -> None:
+    """Dotted extraction is dict-only now; non-dict coordinator.data maps to None.
+
+    The getattr fallback was dead code — coordinator.data is always a dict built
+    by `_build_payload`. Removing the fallback narrows the type surface for
+    mypy/strict and simplifies tests.
+    """
     f = _feature("bg_current")
-    # coordinator.data is a namespace (not dict), exercises getattr branch.
     coord = _coordinator(SimpleNamespace(bg=SimpleNamespace(current_sgv=140)))
     monkeypatch.setattr(
         "homeassistant.helpers.update_coordinator.CoordinatorEntity.__init__",
@@ -143,7 +152,7 @@ def test_extract_walks_attribute_path(monkeypatch) -> None:
     )
     ent = NightscoutEntity(coord, f)
     ent.coordinator = coord
-    assert ent._extract() == 140
+    assert ent._extract() is None
 
 
 def test_available_true_when_coordinator_ok_and_value_present(monkeypatch) -> None:

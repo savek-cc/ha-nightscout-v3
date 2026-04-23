@@ -39,21 +39,15 @@ class NightscoutEntity(CoordinatorEntity["NightscoutCoordinator"]):
 
     def _extract(self) -> Any:
         """Pull the value from coordinator data using this feature's dotted path."""
-        data = self.coordinator.data
-        if data is None:
-            return None
+        data: Any = self.coordinator.data
         for part in self._feature.extractor.split("."):
-            if data is None:
+            if not isinstance(data, dict):
                 return None
-            if isinstance(data, dict):
-                data = data.get(part)
-            else:
-                data = getattr(data, part, None)
+            data = data.get(part)
         return data
 
-    @property
-    def available(self) -> bool:
-        """Available only when coordinator last update succeeded AND value is not None."""
-        if not super().available:
-            return False
-        return self._extract() is not None
+    # `available` is inherited from CoordinatorEntity; we do NOT override
+    # it to also gate on `_extract() is not None`. A successful poll that
+    # returns `None` for a given feature (e.g. last_bolus_time before the
+    # first bolus of the day) is a legitimate "no value yet" state and
+    # should surface as `unknown`, not `unavailable`.
