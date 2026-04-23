@@ -14,9 +14,11 @@ README = Path("README.md")
     [
         "Nightscout v3",
         "HACS",
-        "Silver",
-        "DevInstance",
-        "reauthentication",
+        "Home Assistant `2026.3`",
+        "Nightscout `15.0`",
+        "Supported functionality",
+        "Troubleshooting",
+        "reauthenticate",
         "dashboards/nightscout.yaml",
     ],
 )

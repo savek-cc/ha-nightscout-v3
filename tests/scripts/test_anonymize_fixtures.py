@@ -16,9 +16,9 @@ def test_redacts_urls_tokens_and_notes() -> None:
                 "sgv": 142,
                 "direction": "Flat",
                 "date": 1713780000000,
-                "notes": "ate pizza at CornerCafe's",
+                "notes": "ate pizza at corner cafe",
                 "enteredBy": "user@example.invalid",
-                "url": "https://dev-nightscout.example.invalid/api/v3/entries",
+                "url": "https://nightscout.example.invalid/api/v3/entries",
             }
         ],
     }
@@ -27,9 +27,9 @@ def test_redacts_urls_tokens_and_notes() -> None:
     assert entry["sgv"] == 142
     assert entry["direction"] == "Flat"
     assert entry["date"] == 0
-    assert "CornerCafe" not in json.dumps(anon)
-    assert "example-private" not in json.dumps(anon)
-    assert "timm" not in json.dumps(anon).lower()
+    assert "corner cafe" not in json.dumps(anon).lower()
+    assert "example.invalid" not in json.dumps(anon)
+    assert "user@" not in json.dumps(anon).lower()
     assert entry["_id"] != "abc123def456"
     assert len(entry["_id"]) == 24
 
@@ -73,7 +73,7 @@ def test_redacts_device_and_pump_identifiers() -> None:
                 "pumpSerial": "PUMP_10154415",
                 "pumpType": "Medtronic 722",
                 "ActiveProfile": "primary-user-profile",
-                "reason": "sensitivity raised to 1.3 because pump at CornerCafe's",
+                "reason": "sensitivity raised to 1.3 because pump at corner cafe",
                 "pumpId": "xyz-pump-id",
                 "Version": "AAPS build abc123",
                 "sgv": 100,
@@ -87,7 +87,7 @@ def test_redacts_device_and_pump_identifiers() -> None:
         "PUMP_10154415",
         "Medtronic",
         "primary-user-profile",
-        "CornerCafe",
+        "corner cafe",
         "AAPS build",
         "real-patient-uuid",
         "xyz-pump-id",

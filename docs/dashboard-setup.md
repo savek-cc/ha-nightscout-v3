@@ -43,26 +43,19 @@ and install. Reload HA's frontend resources after.
 
 The shipped YAML assumes the integration's device slug is **`nightscout_v3`**,
 so entity IDs look like `sensor.nightscout_v3_bg_current`. If you named your
-config entry something else — e.g. **"DevInstance"** — your entity IDs will be
-`sensor.timm_bg_current`, `sensor.felicia_bg_current`, etc.
+config entry something else, the slug changes too. For example, a config entry
+named `Child A` will normally produce entity IDs such as
+`sensor.child_a_bg_current`.
 
-Search-and-replace across the YAML:
-
-```bash
-sed -i 's/sensor\.nightscout_v3_/sensor.timm_/g;
-        s/binary_sensor\.nightscout_v3_/binary_sensor.timm_/g' \
-    dashboards/nightscout.yaml
-```
-
-Repeat for each instance with its own dashboard copy.
+Search and replace `nightscout_v3` in the dashboard YAML with your actual
+entity slug, for both `sensor.` and `binary_sensor.` references.
 
 ## Multiple instances side by side
 
-Two instances coexist on the same HA. A common pattern for a family with
-two Type 1 diabetics:
+Two instances can coexist on the same HA installation.
 
-- `dashboards/nightscout.yaml` → **DevInstance** (dev target).
-- `dashboards/nightscout-felicia.yaml` → search-and-replace → **ProdInstance**.
+- Copy `dashboards/nightscout.yaml` to a second filename.
+- Replace the entity slug in each copy so it matches the correct config entry.
 
 Register both under `lovelace.dashboards` with distinct `filename` entries.
 

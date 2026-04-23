@@ -2,7 +2,7 @@
 #
 # Requires HACS frontend plugins: apexcharts-card, mini-graph-card, mushroom, card-mod.
 # Assumes the integration's device slug is "nightscout_v3". If your config-entry
-# title differs (e.g. "DevInstance", "ProdInstance"), entity IDs will be
+# title differs, entity IDs will be
 # sensor.<your_slug>_<feature_key>. Search-and-replace "nightscout_v3" to match.
 #
 # Feature keys are the stable identifiers from custom_components/nightscout_v3/

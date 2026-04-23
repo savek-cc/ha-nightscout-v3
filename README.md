@@ -1,392 +1,221 @@
 # Nightscout v3 for Home Assistant
 
-A Home Assistant custom integration that surfaces a Nightscout instance as
-first-class sensors, binary sensors, a device, a diagnostics export, and a
-ready-to-install Lovelace dashboard. Written for the v3 Nightscout API
-(JWT auth, subjects, capability probing) and tested against AAPS-fed
-instances used by Type 1 diabetics.
+Nightscout v3 is a custom Home Assistant integration that reads data from a
+[Nightscout](https://nightscout.github.io/) server through the `/api/v3` API
+and exposes it as native Home Assistant entities.
 
-## What it does
-
-- **BG**: current SGV, Δ, direction, trend arrow, staleness.
-- **Pump**: reservoir, battery, base/temp basal, active profile, last bolus.
-- **Loop** (AAPS/OpenAPS): mode, active, IOB, COB, predictions, eventual/target
-  BG, sensitivity ratio, last-enacted age.
-- **Careportal read-only**: sensor/cannula/insulin/pump-battery age, last meal
-  carbs, carbs today.
-- **Statistics** (per configurable window, 14 d always on): mean, SD, CV, GMI,
-  eHbA1c DCCT, TIR (5 buckets), LBGI/HBGI, hourly profile, AGP percentiles.
-- **Uploader**: battery %, online, charging.
-- **Diagnostics export**: redacted JSON snapshot for bug reports.
+It is built for people who want Nightscout data inside Home Assistant without
+manually wiring REST sensors, statistics helpers, or custom templates.
+Because HACS renders the repository README on the integration page, this file
+is intentionally written as end-user documentation first.
 
 ## Requirements
 
-- Home Assistant ≥ 2025.1 (uses `runtime_data` and the current quality-scale gates).
-- A Nightscout server with the v3 API enabled (Nightscout ≥ 15.0).
-- An access token with at least `*:*:read`. Write scopes
-  (`api:treatments:create` etc.) are not needed — v0.1.0 is read-only.
+- Home Assistant `2026.3` or newer
+- Nightscout `15.0` or newer with the v3 API available
+- A Nightscout URL reachable from your Home Assistant instance
+- A Nightscout access token with at least `*:*:read`
 
-### Tested upstream stacks
+## Installation
 
-Home Assistant does not connect to CGM hardware directly — it connects to a
-Nightscout server that your uploader populates. The combinations routinely
-exercised against this integration are:
+### HACS
 
-| Uploader / loop stack | Nightscout version | Notes |
-| --- | --- | --- |
-| **AAPS** (Android APS) ≥ 3.2 | 15.0.x / 15.1.x | Primary development target; exercises pump + OpenAPS + careportal paths. |
-| **Loop / iAPS** (iOS) ≥ 3.4 | 15.0.x | `devicestatus.loop` variants; predictions + eventual BG. |
-| **xDrip+** ≥ 2024-12 | 15.0.x | Entries + uploader-battery only; no pump/loop features. |
-| **Nightscout Care Portal** only | 15.0.x | Treatments + age sensors; degrades gracefully when pump/loop are absent. |
+If this repository is not in the default HACS catalog yet, add it as a custom
+repository first.
 
-Older Nightscout servers (≤ 14.x) do not expose `/api/v3` and will surface a
-persistent repair issue asking you to upgrade.
+1. Open HACS in Home Assistant.
+2. Go to **Integrations**.
+3. Open the three-dot menu and select **Custom repositories**.
+4. Add this GitHub repository URL and choose **Integration** as the category.
+5. Download **Nightscout v3**.
+6. Restart Home Assistant.
+7. Go to **Settings → Devices & services → Add integration** and search for
+   **Nightscout v3**.
 
-## Installation via HACS
+### Manual installation
 
-1. In HACS, **Integrations → ⋯ → Custom repositories**.
-2. Add this repository's Git URL as category **Integration**.
-3. Install **Nightscout v3**. Restart Home Assistant.
-4. **Settings → Devices & Services → Add Integration → Nightscout v3**.
+1. Copy `custom_components/nightscout_v3` into
+   `<config>/custom_components/nightscout_v3`.
+2. Restart Home Assistant.
+3. Go to **Settings → Devices & services → Add integration** and search for
+   **Nightscout v3**.
 
 ## Configuration
 
-### User step
+The integration is configured entirely from the Home Assistant UI.
 
-- **URL** — base URL of your Nightscout server, e.g. `https://my.nightscout.example`.
-  The integration normalizes trailing slashes and rejects non-HTTPS hosts.
-- **Access token** — paste the raw token string. The integration exchanges it
-  for a JWT on setup and refreshes every ~7 h in the background.
+During setup you will be asked for:
 
-### Options flow
+- **Server URL**: the base URL of your Nightscout server, for example
+  `https://nightscout.example.com`
+- **Access token**: the raw Nightscout token string with read access
 
-Open **Configure** on the instance to walk through:
+After setup, open **Configure** on the integration to adjust:
 
-1. **Features** — toggle individual sensors on/off. Disabled features are
-   hidden from the UI.
-2. **Statistics windows** — the mandatory 14 d window plus any combination of
-   1 d / 7 d / 30 d / 90 d.
-3. **TIR thresholds** — override the default 70–180 mg/dL (and very-low /
-   very-high buckets).
-4. **Polling intervals** — fast cycle (default 60 s), change-detect cycle
-   (5 min), stats cycle (60 min or on upstream change).
-5. **Rediscover capabilities** — re-probes the server (re-runs
-   `GET /api/v3/status`) to pick up newly-enabled features.
+- enabled features
+- rolling statistics windows (`1`, `7`, `14`, `30`, and `90` days; `14` is
+  always enabled)
+- time-in-range thresholds
+- polling intervals
+- capability re-discovery if your Nightscout instance starts exposing new data
 
-## Features overview
+If the token stops working, Home Assistant will raise a repair flow so you can
+reauthenticate from the UI without deleting the integration.
 
-| Category    | Count | Default enabled                                         |
-| ----------- | ----- | ------------------------------------------------------- |
-| BG          | 5     | all                                                     |
-| Pump        | 9     | all (gated by `pump` capability)                        |
-| Loop        | 11+1  | all except `loop_reason` (gated by `openaps`)           |
-| Careportal  | 7     | all except `care_last_note`                             |
-| Uploader    | 3     | all (gated by `uploader_battery`)                       |
-| Statistics  | 14/w  | core 10 enabled per window; profile/LBGI/HBGI/AGP opt-in|
+You can add multiple Nightscout servers to the same Home Assistant instance as
+separate config entries.
 
-See `custom_components/nightscout_v3/feature_registry.py` for the canonical
-list.
+## Supported devices
 
-## Dashboard setup
+This integration connects to **Nightscout**, not directly to CGMs, pumps, or
+loop apps.
 
-A 5-view dashboard (Übersicht, Trend, AGP, Statistik, Loop) ships under
-`dashboards/nightscout.yaml`. It depends on these HACS frontend plugins:
+Known supported inputs:
 
-- `apexcharts-card`, `mini-graph-card`, `mushroom`, `card-mod`.
+- Nightscout servers exposing `/api/v3`
+- entries-only Nightscout setups
+- Nightscout instances populated by AndroidAPS/AAPS
+- Nightscout instances populated by Loop/iAPS/OpenAPS-style status data
+- Care Portal treatment data
+- uploader battery and online status data when present
 
-Full setup walkthrough: **[docs/dashboard-setup.md](docs/dashboard-setup.md)**.
+Not supported:
 
-Three copy-paste snippets live under
-[`dashboards/examples/`](dashboards/examples/):
+- Nightscout `14.x` and older
+- direct CGM or pump connections without Nightscout in the middle
+- write-back actions to Nightscout in `0.1.x`
 
-- [`bg_card.yaml`](dashboards/examples/bg_card.yaml) — the BG "pill"
-  with current reading, delta, direction arrow and staleness badge.
-- [`loop_card.yaml`](dashboards/examples/loop_card.yaml) — closed-loop
-  status, IOB/COB, eventual-BG and last-enacted age.
-- [`agp_card.yaml`](dashboards/examples/agp_card.yaml) — the AGP
-  percentile band rendered via `apexcharts-card` from the
-  `stat_agp_<window>d` sensor's `extra_state_attributes`.
+## Supported functionality
+
+| Area | What Home Assistant gets |
+| --- | --- |
+| BG | current glucose, delta, direction, trend arrow, staleness |
+| Pump | reservoir, battery, status, basal data, active profile, last bolus |
+| Loop | active state, mode, IOB, COB, eventual BG, target BG, sensitivity ratio, predictions, last enacted age |
+| Care Portal | sensor/site/insulin/battery age, last meal carbs, carbs today, last note |
+| Uploader | battery percentage, online state, charging state |
+| Statistics | mean, SD, CV, GMI, HbA1c estimate, TIR buckets, LBGI, HBGI, hourly profile, AGP percentiles |
+
+Entity availability depends on what your Nightscout server actually stores.
+For example, an entries-only server will not create pump or loop entities.
+Some advanced or noisy entities are disabled by default and can be enabled from
+the options flow.
+
+Platforms provided:
+
+- `sensor`
+- `binary_sensor`
+
+The integration is currently read-only and does not register any custom Home
+Assistant actions or services.
+
+## Data updates
+
+This is a polling integration.
+
+- Current entries and device status are refreshed every `60` seconds by default
+- Change detection runs every `5` minutes by default
+- Rolling statistics are recomputed every `60` minutes by default
+- All three intervals can be changed from the options flow
+- Statistics backfill up to `90` days of Nightscout history on first setup
+
+On large Nightscout databases, the first statistics backfill can take a while.
+It is normal for statistics entities to start out empty and fill in after the
+initial history sync completes.
 
 ## Use cases
 
-- **Carer dashboard** on a tablet in the kitchen showing the child's
-  BG, direction arrow, IOB/COB and AAPS loop status live.
-- **TIR tracking** — per-week/month tile on the HA mobile app driven
-  by `stat_tir_in_range_14d` / `stat_cv_14d`; pair with a line chart
-  over the `stat_mean_*d` sensors for a compact report view.
-- **Loop-intervention alert** — automation on
-  `binary_sensor.nightscout_<user>_loop_active` flipping off for more
-  than 20 minutes (AAPS stopped enacting) → Telegram / mobile
-  notification.
-- **Consumable-age reminders** — automations on the DIAGNOSTIC
-  `care_sage_days` / `care_iage_days` / `care_cage_days` sensors
-  triggering at user-defined thresholds ("sensor over 9 days —
-  change today").
-- **Historical export / merge** — pair with HA's long-term statistics
-  for multi-year trend analysis that's more compact than the
-  upstream Nightscout web UI.
+- Build a caregiver dashboard with current glucose, trend, IOB, COB, and loop
+  state on one screen
+- Notify when looping stops for longer than expected
+- Track sensor, site, insulin, or pump battery age with Home Assistant
+  reminders
+- Add rolling TIR, CV, GMI, or HbA1c estimate tiles to a Home Assistant mobile
+  dashboard
 
-## Known limitations
+## Examples
 
-- **Read-only v0.1.x.** No careportal writes yet; adding treatments
-  from HA is on the v2 roadmap.
-- **AAPS `LastBolus` timestamp parsing is best-effort.** AAPS emits a
-  free-text `DD.MM.YY HH:MM` (or older `DD.MM. HH:MM`) string on the
-  `pump.extended` block. Any other format parses as None and the
-  sensor shows `unknown` until the next recognised value arrives.
-- **AGP percentile and hourly-profile sensors use UTC hour-of-day**
-  for bucketing, not the user's local tz. Close to midnight local
-  time this shifts one bucket. Numerical stats (CV, GMI, HbA1c,
-  mean, SD, TIR) are not affected.
-- **Temp basal rate** is sourced from `treatments eventType="Temp
-  Basal"` rather than `devicestatus.pump.extended.TempBasalAbsoluteRate`,
-  because AAPS does not reliably populate the devicestatus field
-  during an active temp.
-- **No built-in migration** from HA's Core `nightscout` integration.
-  This one runs alongside it under a different domain
-  (`nightscout_v3`); entity IDs are prefixed accordingly.
-- **HACS distribution only.** No plans to ship into Home Assistant
-  Core; the API-v3 reliance and stats pipeline are outside the scope
-  of what the core integration maintains.
+This repository includes ready-to-adapt dashboard files:
 
-## Removing the integration
+- `dashboards/nightscout.yaml`: a full Lovelace dashboard
+- `dashboards/examples/bg_card.yaml`: a compact glucose card
+- `dashboards/examples/loop_card.yaml`: loop and pump status card
+- `dashboards/examples/agp_card.yaml`: AGP chart card
 
-1. **Settings → Devices & Services → Nightscout v3 → ⋯ → Delete**. All
-   config entries, entities, and the device go away.
-2. If you used the shipped dashboard, remove the
-   `lovelace.dashboards.nightscout` block from `configuration.yaml` (or
-   un-register it from **Settings → Dashboards**).
-3. In HACS → **Integrations → Nightscout v3 → ⋯ → Remove** to uninstall
-   the integration files. Restart HA.
+The dashboard YAML depends on these frontend cards from HACS:
 
-No external state is left behind. The SQLite history store lives under
-`<config>/nightscout_v3/history_<entry_id>.db` and is removed with the
-config entry. (Pre-0.1.1 instances stored the DB under `.storage/`; the
-integration migrates it forward on first setup after the upgrade.)
-
-## Reauthentication
-
-If your token is rotated or the server rejects the JWT, the integration
-surfaces a Home Assistant reauthentication (**"Repair"**) prompt. Click it,
-paste the new token, and the integration resumes without reconfiguring.
-
-## Multiple instances
-
-Two instances coexist cleanly — one per family member is the expected case.
-Example used in this project: **DevInstance** at `dev-nightscout.example.invalid` (dev / test
-target) and **ProdInstance** at `prod-nightscout.example.invalid` (production, never written
-against). Each gets its own config entry, device, and entity prefix.
-
-## Quality Scale
-
-Bronze and Silver fully claimed. Most Gold rules are implemented
-(devices, entity-category, entity-device-class, entity-translations,
-icon-translations, exception-translations, reconfiguration-flow,
-repair-issues, stale-devices, docs-data-update,
-docs-supported-functions, docs-troubleshooting, docs-known-limitations,
-docs-use-cases, docs-examples). The remaining Gold items
-(`docs-supported-devices` — full Dexcom/Libre/AAPS matrix) and
-Platinum requirements (strict-typing enforced via `mypy --strict` in
-pre-commit; aiohttp session injected via `async_get_clientsession`;
-aiosqlite + aiohttp as fully-async dependencies) are all already met
-at the code level. See `custom_components/nightscout_v3/quality_scale.yaml`
-for the rule-by-rule status.
-
-## Privacy & safety
-
-- No URLs, tokens, patient notes, or free-text pump strings are logged.
-- Diagnostics exports are redacted (`async_redact_data` over URL, token,
-  `reason`, `notes`).
-- Test fixtures are captured against **DevInstance only** and run through
-  `scripts/anonymize_fixtures.py` (device IDs, pump serials, free-text
-  reasons all scrubbed; timestamps rebased; carbs bucketed) before landing
-  in `tests/fixtures/`.
-- `scripts/capture_fixtures.py` and `scripts/smoke_test.py` refuse to run
-  against ProdInstance via a hard-coded hostname block.
-
-## Server-side tuning
-
-On Nightscout instances with long history, this integration's capability
-probe and regular polling issue API v3 search queries against
-`treatments`, `entries`, and `devicestatus`. Nightscout's v3 layer
-(`lib/api3/generic/search/input.js#parseSort`) unconditionally appends
-three tiebreaker fields (`identifier`, `created_at`, `date`) to **every**
-sort — so the Mongo sort is always three-field, and none of the default
-indexes cover that shape. The result: COLLSCAN + in-memory SORT on every
-v3 search, including simple "latest 1" lookups.
-
-Measured against a real instance (Nightscout 15.0.6):
-
-| Collection   | Docs  | Plan before                              | Time    |
-| ------------ | ----- | ---------------------------------------- | ------- |
-| treatments   | 574k  | `IXSCAN(eventType_1)` + SORT, 214 keys  | ~2 s    |
-| entries      | 961k  | **COLLSCAN** + SORT, 961k docs examined | ~5.8 s  |
-| devicestatus | 1.9M  | **COLLSCAN** + SORT, 1.9M docs examined | ~28 s   |
-
-The devicestatus case alone can OOM-kill Mongo on small-RAM hosts.
-
-One-shot fix: add three compound indexes matching the real sort shapes.
-
-```bash
-docker exec <mongo-container> mongosh <db> --eval '
-  db.treatments.createIndex(
-    {eventType: 1, created_at: -1, identifier: -1, date: -1},
-    {name: "v3_treatments_by_eventtype", background: true});
-  db.entries.createIndex(
-    {date: -1, identifier: -1, created_at: -1},
-    {name: "v3_entries_sort", background: true});
-  db.devicestatus.createIndex(
-    {created_at: -1, identifier: -1, date: -1},
-    {name: "v3_devicestatus_sort", background: true});
-'
-```
-
-After the indexes: each query drops to `IXSCAN → FETCH → LIMIT`,
-`totalKeysExamined: 1`, sub-millisecond execution. Index builds take a
-few seconds even on multi-million-doc collections, and the indexes
-themselves are compact.
-
-Upstream tracking:
-[nightscout/cgm-remote-monitor#8477](https://github.com/nightscout/cgm-remote-monitor/issues/8477)
-(issue) and
-[#8478](https://github.com/nightscout/cgm-remote-monitor/pull/8478)
-(PR) — both cover all three collections.
-Related: PR
-[#5463](https://github.com/nightscout/cgm-remote-monitor/pull/5463)
-introduced the existing `{eventType, duration, created_at}` index (the
-one predating v3's parseSort tiebreakers); issue
-[#7898](https://github.com/nightscout/cgm-remote-monitor/issues/7898)
-reports the correctness symptom (sort direction ignored on
-`/api/v3/treatments?eventType$eq=…&sort$desc=created_at`) that the
-missing compound index likely causes.
-
-### Transparent Hugepages (Mongo 8.x on small-RAM hosts)
-
-**The MongoDB THP recommendation flipped in 8.0.** For 4.x–7.x the
-official tutorial was "disable THP" (`enabled=never`,
-`defrag=never`). 8.0 shipped a new allocator — `tcmalloc-google`, with
-per-CPU caches instead of per-thread — that is much more efficient
-when THP is **enabled**, and *fragments memory aggressively* when
-it's disabled. On small-RAM hosts with the old advice still in place
-(Debian / Fedora / many VPS images default to `never` or `madvise`),
-this shows up as a cascade of "Mongo spirals on RSS → Nightscout
-returns 500 → HA config flow gives up" during the initial backfill.
-
-Primary sources from MongoDB:
-
-- [Disable THP tutorial (current manual, with the 8.0 carve-out)](https://www.mongodb.com/docs/manual/tutorial/disable-transparent-huge-pages/):
-  *"Starting in MongoDB 8.0, MongoDB uses an upgraded version of
-  TCMalloc that improves performance with Transparent Hugepages
-  enabled. If you are using MongoDB 8.0 or later, see Enable
-  Transparent Hugepages (THP)."*
-- [TCMalloc Performance Optimization](https://www.mongodb.com/docs/manual/administration/tcmalloc-performance/)
-  — the 8.0 tuning page with the exact sysfs values reproduced below.
-- [startup_warnings_mongod.cpp](https://github.com/mongodb/mongo/blob/master/src/mongo/db/startup_warnings_mongod.cpp)
-  — source of the `9068900` / `8640302` / `8386700` startup warnings.
-
-Docker doesn't help: containers share the host kernel, so the Mongo
-process inside the container reads the host's `/sys/kernel/mm/`
-regardless of the image. The fix has to land on the host VM.
-
-On a systemd host (most modern Linux, Synology DSM excluded), drop in
-these two files once and they persist across reboots:
-
-```ini
-# /etc/systemd/system/mongo-thp.service
-[Unit]
-Description=Set THP for MongoDB tcmalloc-google allocator
-After=sysinit.target
-
-[Service]
-Type=oneshot
-ExecStart=/bin/sh -c 'echo always > /sys/kernel/mm/transparent_hugepage/enabled; echo defer+madvise > /sys/kernel/mm/transparent_hugepage/defrag; echo 0 > /sys/kernel/mm/transparent_hugepage/khugepaged/max_ptes_none'
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```ini
-# /etc/sysctl.d/99-mongo-thp.conf
-vm.swappiness = 1
-vm.overcommit_memory = 1
-```
-
-Enable and apply:
-
-```bash
-systemctl daemon-reload
-systemctl enable --now mongo-thp.service
-sysctl -p /etc/sysctl.d/99-mongo-thp.conf
-docker restart <your-mongo-container>
-```
-
-Why four separate things:
-
-- `transparent_hugepage/enabled = always` — provide hugepages to any
-  process, not just those that explicitly `madvise()` for them.
-- `transparent_hugepage/defrag = defer+madvise` — satisfy THP requests
-  without blocking page faults; compaction happens in background.
-- `khugepaged/max_ptes_none = 0` — let khugepaged collapse 4K pages
-  into 2M hugepages aggressively, so the allocator doesn't stay in
-  4K-land after large alloc/free churn.
-- `vm.swappiness = 1` — never preempt RSS to swap unless we actually
-  run out of RAM; for in-memory databases the swap-back-in latency
-  dominates.
-- `vm.overcommit_memory = 1` — let tcmalloc-google reserve large
-  virtual-address regions up front (the allocator is designed around
-  this); with the default `0`, requests that exceed
-  heuristic-available RAM fail even though THP would satisfy them from
-  unused pages.
-
-`/sys/kernel/mm/transparent_hugepage/*` is **not** sysctl-controllable,
-so the `echo` via a oneshot systemd service is the only persistent
-path. `vm.swappiness` IS sysctl, so it goes through
-`/etc/sysctl.d/*.conf` where systemd-sysctl picks it up at boot.
-
-Then tighten the Mongo budget to its real working set — on a 90-day
-Nightscout with the compound indexes above, 256 MB cache is plenty:
-
-```yaml
-# docker-compose.yml (Nightscout stack)
-mongo:
-  image: mongo:8.2
-  command:
-    - --wiredTigerCacheSizeGB=0.25
-    - --setParameter=diagnosticDataCollectionEnabled=false
-    - --profile=0
-  volumes:
-    - ./mongodb:/data/db
-```
-
-With THP correct, Mongo's total RSS stays around 300-500 MB under
-steady-state HA polling load (observed on a 574k-treatments /
-961k-entries / 1.9M-devicestatus instance). Without THP, the RSS
-grows unbounded with request volume regardless of
-`wiredTigerCacheSizeGB`.
+- `apexcharts-card`
+- `mini-graph-card`
+- `mushroom`
+- `card-mod`
 
 ## Troubleshooting
 
-- **JWT refresh loop in logs** — your token was rotated; use the reauth
-  prompt (Settings → Devices & Services → Nightscout v3 → Repair).
-- **Sensor shows `unavailable` but BG card is fresh** — capability mismatch;
-  run Options → Rediscover capabilities.
-- **"Carbs today" stuck at 0** — Nightscout's `/treatments` returned no Meal
-  Bolus or Carbs entries in the last 24 h; not an integration bug.
-- **Dashboard cards render blank** — HACS frontend plugins missing; see
-  `docs/dashboard-setup.md`.
-- **Config flow "Connecting…" hangs 30+ seconds / server memory spikes on
-  Add Integration** — missing compound indexes on `treatments`, `entries`,
-  and `devicestatus`; see **Server-side tuning** above.
-- **Mongo container cycles OOM / segfaults during bulk writes** — host
-  kernel has THP disabled while Mongo 8.x uses `tcmalloc-google`; see
-  **Transparent Hugepages** under **Server-side tuning**.
+### Setup fails with `Cannot reach the Nightscout server`
 
-## Links
+- Confirm the URL is correct and reachable from Home Assistant
+- Confirm your Nightscout server is running and exposes `/api/v3`
+- Confirm you are using Nightscout `15.0` or newer
 
-- **Specification**: `docs/specs/2026-04-22-ha-nightscout-v3-design.md`
-- **Implementation plan**: `docs/plans/2026-04-22-ha-nightscout-v3-plan.md`
-- **Architecture**: `docs/architecture.md`
-- **Contributing**: `CONTRIBUTING.md`
-- **Roadmap**: `docs/roadmap.md`
-- **HACS**: https://hacs.xyz
+### Setup fails with `Token rejected by the server`
+
+- Confirm the token is still valid
+- Confirm the token has at least `*:*:read`
+- If you recently rotated the token, start the integration again with the new
+  value
+
+### The integration does not appear after installing through HACS
+
+- Restart Home Assistant after the download finishes
+- If **Add integration** still does not show the integration, refresh or clear
+  the browser cache and try again
+
+### Some entities are missing
+
+- Pump, loop, care portal, and uploader entities are capability- and
+  data-dependent
+- Open **Configure** and run the capability re-discovery step if your
+  Nightscout instance started exposing new data after the integration was set
+  up
+- Check whether the entity is disabled by default in Home Assistant
+
+### Home Assistant asks for reauthentication
+
+Your Nightscout token is no longer accepted. Open the repair flow for
+**Nightscout v3**, enter a new token, and reload the integration.
+
+### Reporting an issue
+
+When opening an issue, include:
+
+- your Home Assistant version
+- the integration version
+- your Nightscout version
+- a short description of the problem
+- a redacted diagnostics download from the integration, if possible
+
+Diagnostics are redacted before export so URLs, tokens, notes, and related
+sensitive values are not included verbatim.
+
+## Known limitations
+
+- `0.1.x` is read-only
+- There is no migration from Home Assistant's core `nightscout` integration
+- Some entities only exist when the upstream Nightscout data model includes the
+  required fields
+- Nightscout versions older than `15.0` are not supported
+- Statistics depend on the local history cache and may need time to populate on
+  first setup
+
+## Removing the integration
+
+1. Go to **Settings → Devices & services** and remove **Nightscout v3**.
+2. If you installed it through HACS, remove the repository there as well.
+3. Restart Home Assistant.
+4. If you also want to remove the local history cache, delete the
+   `<config>/nightscout_v3/` directory after the integration has been removed.
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for local
+setup, test commands, fixture handling, and pull request expectations.

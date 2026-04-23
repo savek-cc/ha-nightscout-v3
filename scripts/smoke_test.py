@@ -1,6 +1,6 @@
 """Lightweight probe against a Nightscout v3 instance.
 
-Refuses to run against known production hosts (ProdInstance). Outputs a compact
+Can be configured to refuse known production hosts. Outputs a compact
 JSON summary suitable for log inspection.
 
 Usage:
@@ -11,19 +11,26 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import sys
 
 import aiohttp
 
-FORBIDDEN_HOSTS = {"prod-nightscout.example.invalid"}
+FORBIDDEN_HOSTS_ENV = "NIGHTSCOUT_FORBIDDEN_HOSTS"
 
 
 def refuse_forbidden_hosts(url: str) -> None:
     """Exit if `url` points to a known production host."""
-    for forbidden in FORBIDDEN_HOSTS:
-        if forbidden in url:
+    for forbidden in _configured_forbidden_hosts():
+        if forbidden in url.lower():
             sys.stderr.write(f"smoke_test refuses to target {forbidden}\n")
             raise SystemExit(3)
+
+
+def _configured_forbidden_hosts() -> set[str]:
+    """Return lower-cased forbidden-host substrings from the environment."""
+    raw = os.environ.get(FORBIDDEN_HOSTS_ENV, "")
+    return {host.strip().lower() for host in raw.split(",") if host.strip()}
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

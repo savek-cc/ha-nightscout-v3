@@ -12,14 +12,14 @@ CONTRIB = Path("CONTRIBUTING.md")
 @pytest.mark.parametrize(
     "needle",
     [
-        "DevInstance",
-        "ProdInstance",
         "anonymize_fixtures",
         "pytest",
         "ruff",
         "hassfest",
         "verify_silver",
+        "mypy",
         "conventional commits",
+        "non-production",
     ],
 )
 def test_contrib_mentions(needle: str) -> None:

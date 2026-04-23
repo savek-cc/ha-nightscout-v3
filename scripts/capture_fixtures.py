@@ -1,12 +1,14 @@
 """Capture raw Nightscout v3 responses for offline fixture creation.
 
-SAFETY: refuses to run against known production instances (ProdInstance).
+SAFETY: can be configured to refuse known production instances.
 Outputs go to `captures/` -- anonymize with `scripts.anonymize_fixtures`
 before committing.
 
 Env:
-    NS_URL    base URL of a non-production Nightscout instance
-    NS_TOKEN  access token
+    NS_URL                      base URL of a non-production Nightscout instance
+    NS_TOKEN                    access token
+    NIGHTSCOUT_FORBIDDEN_HOSTS  comma-separated host substrings that must
+                                never be targeted by this script
 
 Usage:
     python -m scripts.capture_fixtures status entries devicestatus
@@ -23,7 +25,7 @@ from pathlib import Path
 
 import aiohttp
 
-FORBIDDEN_HOSTS = {"prod-nightscout.example.invalid"}
+FORBIDDEN_HOSTS_ENV = "NIGHTSCOUT_FORBIDDEN_HOSTS"
 
 
 @dataclass
@@ -41,13 +43,19 @@ def build_client_config() -> ClientConfig:
     if not url or not token:
         sys.stderr.write("NS_URL and NS_TOKEN must be set\n")
         raise SystemExit(2)
-    for forbidden in FORBIDDEN_HOSTS:
-        if forbidden in url:
+    for forbidden in _configured_forbidden_hosts():
+        if forbidden in url.lower():
             sys.stderr.write(
                 f"scripts.capture_fixtures refuses to target {forbidden} (production)\n"
             )
             raise SystemExit(3)
     return ClientConfig(base_url=url.rstrip("/"), token=token)
+
+
+def _configured_forbidden_hosts() -> set[str]:
+    """Return lower-cased forbidden-host substrings from the environment."""
+    raw = os.environ.get(FORBIDDEN_HOSTS_ENV, "")
+    return {host.strip().lower() for host in raw.split(",") if host.strip()}
 
 
 async def _capture(cfg: ClientConfig, endpoints: list[str], dst: Path) -> None:

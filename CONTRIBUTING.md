@@ -1,9 +1,20 @@
 # Contributing
 
-Thanks for looking. This integration is developed under a few hard rules;
-please skim all of them before sending a patch.
+Thanks for contributing to Nightscout v3.
 
-## Dev setup
+This file is intentionally practical: how to report a useful issue, how to run
+the project locally, and what we expect from pull requests.
+
+## Before you open an issue or PR
+
+- Read [README.md](README.md) first. It is the user-facing reference for setup,
+  supported functionality, limitations, and troubleshooting.
+- For bug reports, include your Home Assistant version, integration version,
+  Nightscout version, and the exact symptom you are seeing.
+- For behavior changes, include tests and any related README updates in the
+  same pull request.
+
+## Development setup
 
 ```bash
 git clone <repo>
@@ -15,104 +26,66 @@ pip install -r requirements-test.txt
 pre-commit install
 ```
 
-Python ≥ 3.13 (we target 3.14 in CI). Home Assistant dev dependencies are
-installed transitively via `pytest-homeassistant-custom-component`.
+Python `3.13+` is required. CI currently targets Python `3.14`.
 
-## Test-only-against-DevInstance rule
-
-We have two real Nightscout instances:
-
-- **DevInstance** (`dev-nightscout.example.invalid`) — the dev / test target. Live smoke tests
-  and fixture captures run here.
-- **ProdInstance** (`prod-nightscout.example.invalid`) — **production**. Never run any capture,
-  smoke test, or experimental request against it. The scripts in
-  `scripts/capture_fixtures.py` and `scripts/smoke_test.py` enforce this with
-  a `FORBIDDEN_HOSTS` guard that exits non-zero if the URL resolves to a
-  ProdInstance host. **Do not weaken or remove this guard** — treat any PR that
-  bypasses it as a bug.
-
-## Fixture workflow
-
-Raw captures never land in git. The flow is:
-
-1. `python -m scripts.capture_fixtures` with `NS_URL` / `NS_TOKEN` pointing
-   at DevInstance → writes raw JSON under `captures/` (gitignored).
-2. `python -m scripts.anonymize_fixtures captures/ tests/fixtures/` →
-   scrubs URLs, tokens, patient notes, device serials, pump firmware,
-   openaps reason blobs; buckets carbs to the nearest 10 g; rebases
-   timestamps; regenerates opaque IDs.
-3. Commit only the anonymized files. `captures/` is gitignored.
-
-If you add a new sensitive key upstream (e.g. Nightscout starts shipping a
-new device identifier), extend `SENSITIVE_STRING_KEYS` / `DROP_KEYS` in
-`scripts/anonymize_fixtures.py` and add a regression test in
-`tests/scripts/test_anonymize_fixtures.py`.
-
-## Code style
-
-- **ruff** (`ruff check .` + `ruff format .`). See `ruff.toml`.
-- **pyright / basedpyright** — we target `strict`. No `# type: ignore`
-  without a one-line justification comment.
-- **No blanket `except:`** and no `except Exception:` without a targeted
-  log + re-raise.
-- **No backward-compat shims** — when a signature changes, change all
-  callers in the same commit. There is no external user of internal APIs.
-- **runtime_data everywhere** — never store entry state in
-  `hass.data[DOMAIN][entry.entry_id]`.
-
-## Test expectations
-
-- Overall coverage floor: **95 %**, enforced via `--cov-fail-under=95` in
-  `pyproject.toml`. There is no per-file floor today.
-- New behavior begins with a failing test (TDD). Both the plan and the
-  review gates enforce this.
-- **No network in unit tests.** Integration-layer tests use
-  `aioresponses`; domain-layer tests are pure.
-- pytest markers: no slow tests at the moment; if you add one, mark it
-  `@pytest.mark.slow` and exclude from default run.
-
-## Commit style
-
-[conventional commits](https://www.conventionalcommits.org/): `feat(api): …`,
-`fix(coordinator): …`, `docs: …`, `test(statistics): …`, `chore: …`, etc.
-One logical change per commit. Squash fixups locally before pushing.
-
-Co-authorship trailer for AI-assisted work is fine, but make it truthful.
-
-## Silver Quality Scale gate
+## Run checks locally
 
 Before opening a PR, run:
 
 ```bash
-python -m scripts.verify_silver --strict-manifest
-pytest --cov
 ruff check .
+ruff format --check .
+mypy custom_components/nightscout_v3
+pytest
+python -m scripts.verify_silver --strict-manifest
 ```
 
-All three must pass. If you have a Home Assistant core checkout, also run
-`hassfest` against this integration from that checkout — we don't ship a
-standalone invocation because hassfest is not a pip-installable tool. `verify_silver` checks `quality_scale.yaml`, translation
-completeness, `PARALLEL_UPDATES` presence on platforms, `_attr_has_entity_name`
-on the base entity, and that `manifest.json` declares `quality_scale: silver`.
+If you have a local Home Assistant Core checkout available, run `hassfest`
+there as well, especially after `manifest.json`, translations, or integration
+metadata changes.
 
-## Code review flow
+The test environment is provided by
+`pytest-homeassistant-custom-component`.
 
-Every phase closes with a code-reviewer subagent pass whose report lands
-under `docs/reviews/`. If your change spans a phase boundary, include a
-fresh review commit in the same PR. Review verdicts of "request changes"
-get addressed in the same PR — don't merge with known findings.
+## Tests and fixtures
 
-## Dashboards
+- Add or update tests with every behavior change.
+- Unit tests must not make live network calls.
+- Never commit raw Nightscout captures.
+- If you refresh fixtures, capture from a dedicated non-production Nightscout
+  test instance only.
+- Run `scripts/anonymize_fixtures.py` before committing fixture updates and
+  verify the anonymized output still looks safe to publish.
+- If Nightscout starts returning a new identifying field, extend the anonymizer
+  and add a regression test for it.
 
-Dashboards live under `dashboards/` and are **not** shipped inside the
-integration. A smoke test (`tests/dashboards/test_yaml_shape.py`) ensures
-every `sensor.nightscout_v3_*` / `binary_sensor.nightscout_v3_*` reference
-resolves to a real feature key in `FEATURE_REGISTRY` or
-`stats_feature_defs(14)`. If you rename a feature key, the dashboard test
-will catch the divergence immediately.
+## Code expectations
+
+- Keep the integration UI-configurable. New user-facing configuration should go
+  through config flows or options flows when appropriate.
+- Use `ConfigEntry.runtime_data` for runtime state.
+- Prefer targeted exception handling over blanket catches.
+- Production code should pass `mypy --strict`.
+- Update docs, dashboard examples, or diagnostics-related notes when user
+  behavior changes.
+
+## Pull requests
+
+- Keep PRs focused and explain the user-visible impact.
+- Include tests for new behavior and regressions.
+- Prefer conventional commits such as `feat:`, `fix:`, `docs:`, `test:`, or
+  `chore:`.
+- Do not commit secrets, raw captures, or personally identifying Nightscout
+  data.
 
 ## Getting help
 
-Open an issue. Include `diagnostics` output (redacted by the integration),
-a ruff/pytest failure log if applicable, and your HA + integration
-versions.
+Open an issue or draft PR if you want feedback before finishing a change.
+
+For bug reports, include:
+
+- Home Assistant version
+- integration version
+- Nightscout version
+- relevant log excerpt
+- diagnostics export when possible

@@ -19,12 +19,14 @@ def test_parses_custom_limit() -> None:
     assert ns.limit == 10
 
 
-def test_refuses_felicia() -> None:
+def test_refuses_configured_production_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NIGHTSCOUT_FORBIDDEN_HOSTS", "prod.example.invalid")
     with pytest.raises(SystemExit) as exc:
-        refuse_forbidden_hosts("https://prod-nightscout.example.invalid")
+        refuse_forbidden_hosts("https://prod.example.invalid")
     assert exc.value.code == 3
 
 
-def test_allows_non_forbidden_host() -> None:
+def test_allows_non_forbidden_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NIGHTSCOUT_FORBIDDEN_HOSTS", raising=False)
     # Should NOT raise
     refuse_forbidden_hosts("https://example.invalid")
