@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
+from pathlib import Path
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -21,6 +22,7 @@ from .const import (
     CONF_CAPABILITIES,
     CONF_CAPABILITIES_PROBED_AT,
     CONF_URL,
+    DOMAIN,
     JWT_BACKGROUND_REFRESH_HOURS,
 )
 from .coordinator import NightscoutCoordinator
@@ -63,17 +65,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: NightscoutConfigEntry) -
         },
     )
 
-    db_path = hass.config.path(".storage", f"nightscout_v3_{entry.entry_id}.db")
-    from pathlib import Path
-
-    store = await HistoryStore.open(Path(db_path))
+    db_path = await _prepare_history_db_path(hass, entry.entry_id)
+    store = await HistoryStore.open(db_path)
     if await store.is_corrupt():
         await store.recover_from_corruption()
 
     coordinator = NightscoutCoordinator(hass, client, capabilities, store, entry)
     await coordinator.async_config_entry_first_refresh()
 
-    async def _refresh_jwt(_now) -> None:
+    async def _refresh_jwt(_now: datetime) -> None:
         try:
             await jwt_manager.refresh()
         except AuthError:
@@ -113,3 +113,26 @@ async def async_unload_entry(hass: HomeAssistant, entry: NightscoutConfigEntry) 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload the entry on options changes."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def _prepare_history_db_path(hass: HomeAssistant, entry_id: str) -> Path:
+    """Return the history DB path, creating its parent and migrating legacy locations.
+
+    Until 0.1.1 the DB lived under `.storage/nightscout_v3_<id>.db`, but
+    `.storage/` is reserved for HA's Store helper. Move any existing file
+    into the dedicated `<config>/nightscout_v3/` directory on setup.
+    """
+    new_path = Path(hass.config.path(DOMAIN, f"history_{entry_id}.db"))
+    old_path = Path(hass.config.path(".storage", f"nightscout_v3_{entry_id}.db"))
+
+    def _migrate_on_disk() -> None:
+        new_path.parent.mkdir(parents=True, exist_ok=True)
+        if old_path.exists() and not new_path.exists():
+            old_path.rename(new_path)
+            _LOGGER.info(
+                "Migrated history DB from %s to %s (out of reserved .storage/)",
+                old_path, new_path,
+            )
+
+    await hass.async_add_executor_job(_migrate_on_disk)
+    return new_path

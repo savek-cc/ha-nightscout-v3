@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import sqlite3
@@ -63,8 +64,12 @@ class HistoryStore:
 
     @classmethod
     async def open(cls, path: Path) -> HistoryStore:
-        """Open (or create) the history store at the given path."""
-        path.parent.mkdir(parents=True, exist_ok=True)
+        """Open (or create) the history store at the given path.
+
+        Caller must ensure the parent directory exists (this coroutine
+        runs inside HA's event loop; creating a directory is a blocking
+        syscall and belongs in an executor).
+        """
         db = await aiosqlite.connect(path)
         db.row_factory = aiosqlite.Row
         store = cls(path, db)
@@ -199,7 +204,8 @@ class HistoryStore:
         """Move the broken file aside and re-initialize."""
         await self._db.close()
         backup = self._path.with_suffix(self._path.suffix + f".broken.{int(time.time())}")
-        self._path.rename(backup)
+        # rename is a blocking syscall — push it off the event loop.
+        await asyncio.to_thread(self._path.rename, backup)
         self._db = await aiosqlite.connect(self._path)
         self._db.row_factory = aiosqlite.Row
         await self._initialize_schema()
