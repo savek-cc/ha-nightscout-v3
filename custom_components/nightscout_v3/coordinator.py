@@ -403,17 +403,45 @@ def _pump_block(ds: dict[str, Any]) -> dict[str, Any]:
 
 
 def _temp_basal_rate(ds: dict[str, Any]) -> float | None:
-    """Primary: openaps.enacted.rate; fallback None (treatments lookup is in change-detect)."""
-    openaps = ds.get("openaps") or {}
-    enacted = openaps.get("enacted") or {}
-    return enacted.get("rate")
+    """Return the currently-running temp basal rate in U/h, or None if none.
+
+    AAPS reports this redundantly in two places:
+      - `pump.extended.TempBasalAbsoluteRate` — the authoritative value
+      - `openaps.enacted.rate` — can be `-1` meaning "no enacted override"
+        (AAPS sentinel, *not* a real negative rate). Filter the sentinel
+        when falling back.
+    """
+    ext = (ds.get("pump") or {}).get("extended") or {}
+    if (rate := ext.get("TempBasalAbsoluteRate")) is not None:
+        return float(rate)
+    enacted = (ds.get("openaps") or {}).get("enacted") or {}
+    rate = enacted.get("rate")
+    if rate is None or rate < 0:
+        return None
+    return float(rate)
 
 
-def _parse_last_bolus(raw: Any) -> str | None:
-    """AAPS emits strings like '21.04. 19:15' — surface as-is; consumers can render."""
+def _parse_last_bolus(raw: Any) -> datetime | None:
+    """Parse AAPS' `pump.extended.LastBolus` free-text timestamp.
+
+    AAPS emits `DD.MM.YY HH:MM` (with the 2-digit year) or the older
+    `DD.MM. HH:MM` (no year — assumed current). Anything else returns
+    None so HA surfaces the sensor as unavailable rather than blowing
+    up the timestamp device class.
+    """
     if raw in (None, "", "null"):
         return None
-    return str(raw)
+    s = str(raw).strip()
+    now = datetime.now().astimezone()
+    for fmt in ("%d.%m.%y %H:%M", "%d.%m. %H:%M"):
+        try:
+            parsed = datetime.strptime(s, fmt)
+        except ValueError:
+            continue
+        if fmt == "%d.%m. %H:%M":
+            parsed = parsed.replace(year=now.year)
+        return parsed.replace(tzinfo=now.tzinfo)
+    return None
 
 
 def _loop_block(ds: dict[str, Any], now: datetime) -> dict[str, Any]:
@@ -456,12 +484,11 @@ def _uploader_block(ds: dict[str, Any], now: datetime) -> dict[str, Any]:
         return {"battery_percent": None, "online": False, "charging": None}
     created = _parse_created(ds)
     age_min = int((now - created).total_seconds() / 60) if created else None
-    battery = ds.get("uploaderBattery")
-    if battery is None:
-        pump_battery = ((ds.get("pump") or {}).get("battery") or {}).get("percent")
-        battery = pump_battery
+    # `uploaderBattery` is the phone/receiver battery. Never fall back
+    # to pump.battery — that's a different device and would mislabel
+    # the reading on the uploader sensor.
     return {
-        "battery_percent": battery,
+        "battery_percent": ds.get("uploaderBattery"),
         "online": age_min is not None and age_min < 15,
         "charging": ds.get("isCharging"),
     }

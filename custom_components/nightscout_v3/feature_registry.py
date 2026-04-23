@@ -130,7 +130,10 @@ FEATURE_REGISTRY: list[FeatureDef] = [
                state_class=SensorStateClass.MEASUREMENT, icon="mdi:scale-balance"),
     FeatureDef("loop_reason", Category.LOOP, Platform.SENSOR, _has_openaps, False,
                "loop_reason", "loop.reason", icon="mdi:message-text-outline"),
-    FeatureDef("loop_pred_bgs", Category.LOOP, Platform.SENSOR, _has_openaps, True,
+    # Off by default: the state is always "unknown" (pred_bgs is a dict
+    # surfaced via extra_state_attributes for apexcharts-card consumers).
+    # On a plain sensor view it looks broken next to loop_eventual_bg.
+    FeatureDef("loop_pred_bgs", Category.LOOP, Platform.SENSOR, _has_openaps, False,
                "loop_pred_bgs", "loop.pred_bgs", icon="mdi:chart-timeline-variant"),
     FeatureDef("loop_last_enacted_age_minutes", Category.LOOP, Platform.SENSOR, _has_openaps, True,
                "loop_last_enacted_age_minutes", "loop.last_enacted_age_minutes",
@@ -140,7 +143,8 @@ FEATURE_REGISTRY: list[FeatureDef] = [
     FeatureDef("care_sage_days", Category.CAREPORTAL, Platform.SENSOR,
                lambda c: c.has_treatments_sensor_change, True,
                "care_sage_days", "care.sage_days",
-               state_class=SensorStateClass.MEASUREMENT, unit=UnitOfTime.DAYS, icon="mdi:cgm"),
+               state_class=SensorStateClass.MEASUREMENT, unit=UnitOfTime.DAYS,
+               icon="mdi:radar"),
     FeatureDef("care_iage_days", Category.CAREPORTAL, Platform.SENSOR,
                lambda c: c.has_treatments_insulin_change, True,
                "care_iage_days", "care.iage_days",
