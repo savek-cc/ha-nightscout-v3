@@ -116,6 +116,55 @@ class NightscoutConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(step_id="user", data_schema=_USER_SCHEMA, errors=errors)
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle reconfiguration of an existing entry (URL + token change)."""
+        errors: dict[str, str] = {}
+        reconfigure_entry = self._get_reconfigure_entry()
+        if user_input is not None:
+            url = _normalize(user_input[CONF_URL])
+            token = user_input[CONF_ACCESS_TOKEN]
+            await self.async_set_unique_id(_unique_id(url))
+            # If URL changed, ensure the new one isn't already configured elsewhere.
+            self._abort_if_unique_id_mismatch(reason="unique_id_mismatch")
+            try:
+                session = async_get_clientsession(self.hass)
+                mgr = JwtManager(session, url, token)
+                await mgr.initial_exchange()
+                client = NightscoutV3Client(session, url, mgr)
+                caps = await probe_capabilities(client)
+            except AuthError:
+                errors["base"] = "invalid_auth"
+            except ApiError:
+                errors["base"] = "cannot_connect"
+            except Exception:
+                _LOGGER.exception("Unhandled error in reconfigure step")
+                errors["base"] = "unknown"
+
+            if not errors:
+                return self.async_update_reload_and_abort(
+                    reconfigure_entry,
+                    data={
+                        **reconfigure_entry.data,
+                        CONF_URL: url,
+                        CONF_ACCESS_TOKEN: token,
+                        CONF_CAPABILITIES: caps.to_dict(),
+                        CONF_CAPABILITIES_PROBED_AT: caps.last_probed_at_ms,
+                    },
+                )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_URL, default=reconfigure_entry.data.get(CONF_URL, "")): str,
+                    vol.Required(CONF_ACCESS_TOKEN): str,
+                }
+            ),
+            errors=errors,
+        )
+
     async def async_step_reauth(self, entry_data: dict[str, Any]) -> ConfigFlowResult:
         """Handle the reauth step."""
         self._url = entry_data[CONF_URL]

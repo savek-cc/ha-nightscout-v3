@@ -211,6 +211,133 @@ async def test_options_rediscover_updates_capabilities(hass, valid_caps) -> None
     assert result["type"].name == "CREATE_ENTRY"
 
 
+# --- reconfigure ---
+
+
+async def test_reconfigure_happy_path(hass, valid_caps) -> None:
+    """Reconfigure step updates URL+token and reloads the entry."""
+    import hashlib as _h
+
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    old_uid = _h.sha256(b"https://old.ns.example").hexdigest()[:16]
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=old_uid,
+        data={
+            "url": "https://old.ns.example",
+            "access_token": "old-token",
+            "capabilities": valid_caps.to_dict(),
+            "capabilities_probed_at": 0,
+        },
+        options={},
+    )
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reconfigure_flow(hass)
+    assert result["type"].name == "FORM"
+    assert result["step_id"] == "reconfigure"
+
+    with (
+        patch(
+            "custom_components.nightscout_v3.config_flow.JwtManager.initial_exchange",
+            new=AsyncMock(return_value=MagicMock(token="jwt", exp=9999999999, iat=0)),
+        ),
+        patch(
+            "custom_components.nightscout_v3.config_flow.probe_capabilities",
+            new=AsyncMock(return_value=valid_caps),
+        ),
+    ):
+        # Keep the same URL so unique_id survives.
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {"url": "https://old.ns.example", "access_token": "new-token"},
+        )
+    assert result["type"].name == "ABORT"
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data["access_token"] == "new-token"
+
+
+@pytest.mark.parametrize(
+    ("exc_key", "expected_error"),
+    [("auth", "invalid_auth"), ("api", "cannot_connect"), ("unknown", "unknown")],
+)
+async def test_reconfigure_surfaces_errors(hass, valid_caps, exc_key, expected_error) -> None:
+    """Network/auth/unknown errors in reconfigure re-render the form."""
+    import hashlib as _h
+
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    from custom_components.nightscout_v3.api.exceptions import ApiError, AuthError
+
+    exc_map = {
+        "auth": AuthError("401"),
+        "api": ApiError("boom", status=503),
+        "unknown": Exception("?"),
+    }
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        # unique_id must match the URL's hash so async_set_unique_id doesn't abort.
+        unique_id=_h.sha256(b"https://ns.example").hexdigest()[:16],
+        data={
+            "url": "https://ns.example",
+            "access_token": "t",
+            "capabilities": valid_caps.to_dict(),
+            "capabilities_probed_at": 0,
+        },
+        options={},
+    )
+    entry.add_to_hass(hass)
+    result = await entry.start_reconfigure_flow(hass)
+    with patch(
+        "custom_components.nightscout_v3.config_flow.JwtManager.initial_exchange",
+        new=AsyncMock(side_effect=exc_map[exc_key]),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"url": "https://ns.example", "access_token": "t"}
+        )
+    assert result["type"].name == "FORM"
+    assert result["errors"] == {"base": expected_error}
+
+
+async def test_reconfigure_rejects_url_of_different_instance(hass, valid_caps) -> None:
+    """Changing URL to one owned by another entry aborts with unique_id_mismatch."""
+    import hashlib as _h
+
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    # Target entry
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=_h.sha256(b"https://a.ns.example").hexdigest()[:16],
+        data={
+            "url": "https://a.ns.example",
+            "access_token": "t",
+            "capabilities": valid_caps.to_dict(),
+            "capabilities_probed_at": 0,
+        },
+    )
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reconfigure_flow(hass)
+    # User tries to re-point to a DIFFERENT URL.
+    with (
+        patch(
+            "custom_components.nightscout_v3.config_flow.JwtManager.initial_exchange",
+            new=AsyncMock(return_value=MagicMock(token="jwt", exp=9999999999, iat=0)),
+        ),
+        patch(
+            "custom_components.nightscout_v3.config_flow.probe_capabilities",
+            new=AsyncMock(return_value=valid_caps),
+        ),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"url": "https://b.ns.example", "access_token": "t"}
+        )
+    assert result["type"].name == "ABORT"
+    assert result["reason"] == "unique_id_mismatch"
+
+
 # --- reauth ---
 
 

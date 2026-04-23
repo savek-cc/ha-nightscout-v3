@@ -10,7 +10,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.event import async_track_time_interval
 
 from .api.auth import JwtManager
@@ -45,16 +47,46 @@ async def async_setup_entry(hass: HomeAssistant, entry: NightscoutConfigEntry) -
     try:
         await jwt_manager.initial_exchange()
     except AuthError as exc:
-        raise ConfigEntryAuthFailed(str(exc)) from exc
+        raise ConfigEntryAuthFailed(
+            translation_domain=DOMAIN,
+            translation_key="auth_failed",
+        ) from exc
     except ApiError as exc:
-        raise ConfigEntryNotReady(str(exc)) from exc
+        raise ConfigEntryNotReady(
+            translation_domain=DOMAIN,
+            translation_key="cannot_connect",
+            translation_placeholders={"url": url, "error": str(exc)},
+        ) from exc
 
     try:
         capabilities = await probe_capabilities(client)
     except AuthError as exc:
-        raise ConfigEntryAuthFailed(str(exc)) from exc
+        raise ConfigEntryAuthFailed(
+            translation_domain=DOMAIN,
+            translation_key="auth_failed",
+        ) from exc
     except ApiError as exc:
-        raise ConfigEntryNotReady(str(exc)) from exc
+        # 404 from /api/v3/status means the server doesn't implement v3
+        # at all (Nightscout <15). That's not transient — surface as a
+        # persistent repair issue so the user sees what to do.
+        if getattr(exc, "status", None) == 404:
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                f"server_incompatible_{entry.entry_id}",
+                is_fixable=False,
+                severity=ir.IssueSeverity.ERROR,
+                translation_key="server_incompatible",
+                translation_placeholders={"url": url},
+            )
+        raise ConfigEntryNotReady(
+            translation_domain=DOMAIN,
+            translation_key="cannot_connect",
+            translation_placeholders={"url": url, "error": str(exc)},
+        ) from exc
+
+    # Successful capability probe → clear any stale server-incompatible issue.
+    ir.async_delete_issue(hass, DOMAIN, f"server_incompatible_{entry.entry_id}")
 
     hass.config_entries.async_update_entry(
         entry,
@@ -113,6 +145,20 @@ async def async_unload_entry(hass: HomeAssistant, entry: NightscoutConfigEntry) 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload the entry on options changes."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, entry: ConfigEntry, device: DeviceEntry
+) -> bool:
+    """Allow the user to remove the Nightscout device from the device registry.
+
+    There's exactly one device per config entry (the Nightscout server),
+    so any deletion triggered from the UI is valid: we don't want to
+    keep a phantom device around. Returning True here lets HA proceed
+    with the removal; the device is re-created automatically on next
+    setup if the config entry still exists.
+    """
+    return True
 
 
 async def _prepare_history_db_path(hass: HomeAssistant, entry_id: str) -> Path:

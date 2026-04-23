@@ -25,6 +25,11 @@
         "title": "Erneut anmelden — Nightscout v3",
         "description": "Der Zugangstoken ist ungültig. Bitte neuen Token eingeben.",
         "data": { "access_token": "Neuer Zugangstoken" }
+      },
+      "reconfigure": {
+        "title": "Nightscout v3 neu konfigurieren",
+        "description": "Server-URL oder Zugangstoken ändern.",
+        "data": { "url": "Server-URL", "access_token": "Zugangstoken" }
       }
     },
     "error": {
@@ -34,7 +39,9 @@
     },
     "abort": {
       "already_configured": "Diese Nightscout-Instanz ist bereits konfiguriert.",
-      "reauth_successful": "Erneute Anmeldung erfolgreich."
+      "reauth_successful": "Erneute Anmeldung erfolgreich.",
+      "reconfigure_successful": "Neue Konfiguration gespeichert.",
+      "unique_id_mismatch": "Diese URL gehört zu einer anderen Nightscout-Instanz, die bereits in Home Assistant konfiguriert ist."
     }
   },
   "options": {
@@ -124,6 +131,23 @@
       "loop_active": { "name": "Loop aktiv" },
       "uploader_online": { "name": "Uploader online" },
       "uploader_charging": { "name": "Uploader lädt" }
+    }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "Der Nightscout-Zugriffstoken wird nicht mehr akzeptiert. Bitte unter Einstellungen → Geräte & Dienste → Nightscout v3 neu authentifizieren."
+    },
+    "cannot_connect": {
+      "message": "Der Nightscout-Server unter {url} ist nicht erreichbar: {error}"
+    },
+    "server_incompatible": {
+      "message": "Der Nightscout-Server unter {url} stellt die benötigte v3-API nicht bereit. Bitte auf Nightscout 15.0.0 oder neuer aktualisieren."
+    }
+  },
+  "issues": {
+    "server_incompatible": {
+      "title": "Nightscout-Server zu alt",
+      "description": "Der Nightscout-Server unter {url} stellt die benötigte v3-API nicht bereit. Diese Integration benötigt Nightscout 15.0.0 oder neuer. Bitte Server aktualisieren und Integration neu laden."
     }
   }
 }
