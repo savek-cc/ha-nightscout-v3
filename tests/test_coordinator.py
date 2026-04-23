@@ -1,6 +1,7 @@
 """Tests for NightscoutCoordinator staggered-tick behavior."""
 from __future__ import annotations
 
+from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -181,6 +182,24 @@ async def test_incremental_entries_extends_window(
     assert state.last_modified == 20
     assert state.oldest_date == 100  # unchanged
     assert state.newest_date == 250
+
+
+def test_carbs_since_local_midnight_filters_correctly(hass: HomeAssistant) -> None:
+    """Only treatments with created_at >= today's local midnight should count."""
+    from custom_components.nightscout_v3.coordinator import _carbs_since_local_midnight
+    from homeassistant.util import dt as dt_util
+    now_local = dt_util.now()
+    midnight = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    two_hours_before_midnight = (midnight - timedelta(hours=2)).isoformat()
+    two_hours_after_midnight = (midnight + timedelta(hours=2)).isoformat()
+    treatments = [
+        {"created_at": two_hours_before_midnight, "carbs": 100},  # yesterday — skip
+        {"created_at": two_hours_after_midnight, "carbs": 30},    # today
+        {"created_at": two_hours_after_midnight, "carbs": None},  # no carbs — skip
+        {"created_at": "", "carbs": 50},                          # no ts — skip
+        {"created_at": two_hours_after_midnight, "carbs": 45},    # today
+    ]
+    assert _carbs_since_local_midnight(treatments, hass) == 75.0
 
 
 async def test_agp_summary_exposes_per_hour_percentile_lists(

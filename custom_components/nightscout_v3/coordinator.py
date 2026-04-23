@@ -91,7 +91,7 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_modified_cache: dict[str, int] = {}
         self._treatment_age_cache: dict[str, datetime | None] = {}
         self._last_meal: dict[str, Any] | None = None
-        self._carbs_today: float = 0.0
+        self._recent_treatments: list[dict[str, Any]] = []
         self._last_note: str | None = None
 
     @property
@@ -260,9 +260,13 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             meals = await self._client.get_treatments(event_type="Carbs", limit=1)
         self._last_meal = meals[0] if meals else None
 
-        since = _day_ago_ms(1)
-        today = await self._client.get_treatments(since_date=since, limit=200)
-        self._carbs_today = sum(float(t.get("carbs") or 0) for t in today)
+        # 48h window: covers "since local midnight" even far from UTC,
+        # and lets carbs_today stay correct across day boundaries without a
+        # refresh (re-filter happens at _build_payload time).
+        since = _day_ago_ms(2)
+        self._recent_treatments = await self._client.get_treatments(
+            since_date=since, limit=500,
+        )
 
         note_candidates = await self._client.get_treatments(event_type="Note", limit=1)
         if not note_candidates:
@@ -305,12 +309,13 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         ds = getattr(self, "_latest_devicestatus", None) or {}
         stats = getattr(self, "_stats", {})
         now = datetime.now(timezone.utc)
+        carbs_today = _carbs_since_local_midnight(self._recent_treatments, self.hass)
 
         bg = _bg_block(entries, now)
         pump = _pump_block(ds)
         loop = _loop_block(ds, now)
         uploader = _uploader_block(ds, now)
-        care = _care_block(self._treatment_age_cache, now, self._last_meal, self._carbs_today, self._last_note)
+        care = _care_block(self._treatment_age_cache, now, self._last_meal, carbs_today, self._last_note)
 
         return {
             "bg": bg,
@@ -336,6 +341,30 @@ def _parse_created(t: dict[str, Any]) -> datetime | None:
         return datetime.fromisoformat(raw.replace("Z", "+00:00"))
     except ValueError:
         return None
+
+
+def _carbs_since_local_midnight(
+    treatments: list[dict[str, Any]], hass: HomeAssistant,
+) -> float:
+    """Sum `carbs` from treatments with `created_at` >= today's local midnight.
+
+    Recomputed on every build so the value stays correct across day
+    rollovers and even when no new treatments come in.
+    """
+    from homeassistant.util import dt as dt_util
+    now_local = dt_util.now()
+    midnight = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    total = 0.0
+    for t in treatments:
+        carbs = t.get("carbs")
+        if not carbs:
+            continue
+        created = _parse_created(t)
+        if created is None:
+            continue
+        if created >= midnight:
+            total += float(carbs)
+    return total
 
 
 def _bg_block(entries: list[dict[str, Any]], now: datetime) -> dict[str, Any]:
