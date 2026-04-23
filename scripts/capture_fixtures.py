@@ -13,6 +13,7 @@ Env:
 Usage:
     python -m scripts.capture_fixtures status entries devicestatus
 """
+
 from __future__ import annotations
 
 import argparse

@@ -3,6 +3,7 @@
 Exits non-zero if any check fails. Intended to be run from CI and locally
 before toggling quality_scale entries from `todo` to `done`.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -10,24 +11,36 @@ import json
 import re
 import sys
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 import yaml
 
 INTEGRATION = Path("custom_components/nightscout_v3")
 SILVER_RULES_REQUIRED = {
-    "runtime-data", "config-entry-unloading", "parallel-updates",
-    "test-before-configure", "test-before-setup", "unique-config-entry",
-    "has-entity-name", "entity-unique-id", "reauthentication-flow",
-    "log-when-unavailable", "entity-unavailable", "integration-owner",
-    "action-exceptions", "docs-actions", "docs-high-level-description",
-    "docs-installation-instructions", "docs-installation-parameters",
-    "docs-removal-instructions", "docs-configuration-parameters",
+    "runtime-data",
+    "config-entry-unloading",
+    "parallel-updates",
+    "test-before-configure",
+    "test-before-setup",
+    "unique-config-entry",
+    "has-entity-name",
+    "entity-unique-id",
+    "reauthentication-flow",
+    "log-when-unavailable",
+    "entity-unavailable",
+    "integration-owner",
+    "action-exceptions",
+    "docs-actions",
+    "docs-high-level-description",
+    "docs-installation-instructions",
+    "docs-installation-parameters",
+    "docs-removal-instructions",
+    "docs-configuration-parameters",
 }
 
 
-class RuleStatus(str, Enum):
+class RuleStatus(StrEnum):
     """Possible quality-scale rule statuses."""
 
     DONE = "done"
@@ -141,7 +154,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=INTEGRATION)
     parser.add_argument(
-        "--strict-manifest", action="store_true",
+        "--strict-manifest",
+        action="store_true",
         help="require manifest.json to declare quality_scale=silver",
     )
     args = parser.parse_args(argv)

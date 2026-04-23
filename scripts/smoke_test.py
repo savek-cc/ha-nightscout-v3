@@ -6,6 +6,7 @@ JSON summary suitable for log inspection.
 Usage:
     python -m scripts.smoke_test --url https://example.invalid --token $NS_TOKEN
 """
+
 from __future__ import annotations
 
 import argparse
@@ -57,18 +58,14 @@ async def _run(url: str, token: str, limit: int) -> dict[str, object]:
         entries = await client.get_entries(limit=limit)
         devicestatus = await client.get_devicestatus(limit=limit)
 
-        entries_list = (
-            entries.get("result", []) if isinstance(entries, dict) else (entries or [])
-        )
+        entries_list = entries.get("result", []) if isinstance(entries, dict) else (entries or [])
         devicestatus_list = (
             devicestatus.get("result", [])
             if isinstance(devicestatus, dict)
             else (devicestatus or [])
         )
         return {
-            "status_version": (
-                status.get("version") if isinstance(status, dict) else None
-            ),
+            "status_version": (status.get("version") if isinstance(status, dict) else None),
             "capabilities": caps.to_dict(),
             "entries_count": len(entries_list),
             "devicestatus_count": len(devicestatus_list),

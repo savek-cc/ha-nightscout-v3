@@ -21,12 +21,13 @@ git clone <repo>
 cd ha-nightscout-v3
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .
 pip install -r requirements-test.txt
 pre-commit install
 ```
 
 Python `3.13+` is required. CI currently targets Python `3.14`.
+The test suite runs directly from the checked-out source tree; an editable
+install is not required.
 
 ## Run checks locally
 

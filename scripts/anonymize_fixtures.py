@@ -7,6 +7,7 @@ The goal is to strip anything that could identify a person, a server, or a
 medical event while keeping the numeric *shape* of the response so that
 offline tests exercise realistic code paths.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -18,15 +19,38 @@ from pathlib import Path
 from typing import Any
 
 SENSITIVE_STRING_KEYS = {
-    "notes", "enteredBy", "profileJson", "created_at", "srvModified",
-    "url", "baseURL", "instance", "hostname", "author", "email", "username",
-    "name", "firstName", "lastName", "patient",
+    "notes",
+    "enteredBy",
+    "profileJson",
+    "created_at",
+    "srvModified",
+    "url",
+    "baseURL",
+    "instance",
+    "hostname",
+    "author",
+    "email",
+    "username",
+    "name",
+    "firstName",
+    "lastName",
+    "patient",
     # Device/pump identifiers and loop diagnostics that can leak hardware or
     # phone identifiers through serial numbers, firmware strings, or free-text
     # openaps reason blobs.
-    "device", "pumpSerial", "pumpType", "pumpModel", "pumpFirmware",
-    "ActiveProfile", "Version", "reason", "consoleLog", "consoleError",
-    "build", "uuid", "serial",
+    "device",
+    "pumpSerial",
+    "pumpType",
+    "pumpModel",
+    "pumpFirmware",
+    "ActiveProfile",
+    "Version",
+    "reason",
+    "consoleLog",
+    "consoleError",
+    "build",
+    "uuid",
+    "serial",
 }
 
 DROP_KEYS = {"_id", "identifier", "pumpId"}
@@ -92,7 +116,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("src", nargs="+", help="Source JSON files or directories")
     parser.add_argument("dst", help="Destination directory")
     parser.add_argument(
-        "--epoch-offset", type=int, default=0,
+        "--epoch-offset",
+        type=int,
+        default=0,
         help="ms to subtract from timestamps",
     )
     args = parser.parse_args(argv)
