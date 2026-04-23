@@ -1,4 +1,5 @@
 """JWT exchange + refresh for Nightscout v3."""
+
 from __future__ import annotations
 
 import asyncio
@@ -72,18 +73,15 @@ class JwtManager:
                 backoff = _BACKOFF_BASE * (2**attempt)
                 _LOGGER.debug(
                     "JWT exchange attempt %d failed; sleeping %.1fs",
-                    attempt + 1, backoff,
+                    attempt + 1,
+                    backoff,
                 )
                 await asyncio.sleep(backoff)
-        raise ApiError(
-            f"JWT exchange gave up after {MAX_REFRESH_ATTEMPTS} attempts: {last_exc}"
-        )
+        raise ApiError(f"JWT exchange gave up after {MAX_REFRESH_ATTEMPTS} attempts: {last_exc}")
 
     async def _exchange_once(self, url: str) -> JwtState:
         try:
-            async with self._session.get(
-                url, timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
+            async with self._session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
                 if resp.status == 401:
                     raise AuthError("Access token rejected")
                 if resp.status >= 500:
@@ -94,16 +92,15 @@ class JwtManager:
         except (aiohttp.ClientError, TimeoutError) as exc:
             # Avoid `{exc}` interpolation: the exchange URL embeds the raw
             # access token, and some aiohttp error reprs include that URL.
-            raise ApiError(
-                f"Network error during JWT exchange: {type(exc).__name__}"
-            ) from exc
+            raise ApiError(f"Network error during JWT exchange: {type(exc).__name__}") from exc
 
         token = body.get("token")
         exp = body.get("exp")
         iat = body.get("iat")
         if token is None or exp is None or iat is None:
             missing = [
-                name for name, value in (("token", token), ("exp", exp), ("iat", iat))
+                name
+                for name, value in (("token", token), ("exp", exp), ("iat", iat))
                 if value is None
             ]
             raise ApiError(f"Malformed JWT response: missing fields {missing}")

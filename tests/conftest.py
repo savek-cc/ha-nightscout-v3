@@ -1,6 +1,8 @@
 """Shared test fixtures for nightscout_v3."""
+
 from __future__ import annotations
 
+import contextlib
 import json
 from collections.abc import Generator
 from pathlib import Path
@@ -19,21 +21,17 @@ def load_fixture(name: str) -> dict | list:
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(
     request: pytest.FixtureRequest,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     """Auto-enable loading the integration in all tests (skip for pure unit tests)."""
-    # For HA integration tests, we need enable_custom_integrations from pytest-homeassistant-custom-component
-    # For pure unit tests, skip this fixture
-    try:
+    # For HA integration tests we need enable_custom_integrations from
+    # pytest-homeassistant-custom-component. For pure unit tests, skip.
+    with contextlib.suppress(pytest.FixtureLookupError):
         request.getfixturevalue("enable_custom_integrations")
-    except pytest.FixtureLookupError:
-        pass
     yield
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[None, None, None]:
+def mock_setup_entry() -> Generator[None]:
     """Short-circuit async_setup_entry for config-flow-only tests."""
-    with patch(
-        "custom_components.nightscout_v3.async_setup_entry", return_value=True
-    ) as m:
+    with patch("custom_components.nightscout_v3.async_setup_entry", return_value=True) as m:
         yield m

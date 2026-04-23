@@ -1,4 +1,5 @@
 """Tests for anonymize_fixtures script."""
+
 from __future__ import annotations
 
 import json
@@ -36,9 +37,7 @@ def test_redacts_urls_tokens_and_notes() -> None:
 def test_treatment_carbs_bucketed() -> None:
     raw = {
         "status": "OK",
-        "result": [
-            {"eventType": "Meal Bolus", "carbs": 47, "insulin": 3.1, "date": 1713780000000}
-        ],
+        "result": [{"eventType": "Meal Bolus", "carbs": 47, "insulin": 3.1, "date": 1713780000000}],
     }
     anon = anonymize_payload(raw, epoch_offset_ms=1713780000000)
     t = anon["result"][0]

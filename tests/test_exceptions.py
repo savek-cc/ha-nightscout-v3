@@ -1,4 +1,5 @@
 """Tests for nightscout_v3 API exceptions."""
+
 from custom_components.nightscout_v3.api.exceptions import (
     ApiError,
     AuthError,

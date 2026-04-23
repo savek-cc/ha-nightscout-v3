@@ -1,4 +1,5 @@
 """Unit tests for the smoke-test argument surface (no network)."""
+
 from __future__ import annotations
 
 import pytest

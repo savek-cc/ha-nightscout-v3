@@ -1,4 +1,5 @@
 """Sensor platform — one SensorEntity per enabled feature."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -8,7 +9,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import OPT_ENABLED_FEATURES, OPT_STATS_WINDOWS, MANDATORY_STATS_WINDOW
+from .const import MANDATORY_STATS_WINDOW, OPT_ENABLED_FEATURES, OPT_STATS_WINDOWS
 from .entity import NightscoutEntity
 from .feature_registry import FeatureDef, features_for_capabilities, stats_feature_defs
 from .models import NightscoutConfigEntry

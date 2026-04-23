@@ -1,9 +1,10 @@
 """Nightscout v3 REST client."""
+
 from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote
 
@@ -19,9 +20,7 @@ _HARD_TIMEOUT_SECONDS = 35
 
 def _ms_to_iso(ms: int) -> str:
     """Convert epoch-ms to ISO-8601 UTC string for v3 created_at filters."""
-    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).isoformat().replace(
-        "+00:00", "Z"
-    )
+    return datetime.fromtimestamp(ms / 1000, tz=UTC).isoformat().replace("+00:00", "Z")
 
 
 class NightscoutV3Client:
@@ -139,7 +138,9 @@ class NightscoutV3Client:
         try:
             async with asyncio.timeout(_HARD_TIMEOUT_SECONDS):
                 async with self._session.get(
-                    url, headers=headers, timeout=_DEFAULT_TIMEOUT,
+                    url,
+                    headers=headers,
+                    timeout=_DEFAULT_TIMEOUT,
                 ) as resp:
                     if resp.status == 401:
                         raise AuthError(f"401 on {path}")

@@ -1,6 +1,7 @@
 """Every example snippet must be valid YAML, non-empty, and reference only
 known feature keys.
 """
+
 from __future__ import annotations
 
 import re
@@ -8,12 +9,12 @@ from pathlib import Path
 
 import pytest
 import yaml
+from homeassistant.const import Platform
 
 from custom_components.nightscout_v3.feature_registry import (
     FEATURE_REGISTRY,
     stats_feature_defs,
 )
-from homeassistant.const import Platform
 
 EXAMPLES = Path("dashboards/examples")
 SNIPPETS = ["bg_card.yaml", "agp_card.yaml", "loop_card.yaml"]

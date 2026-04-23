@@ -1,7 +1,7 @@
 """Probe a Nightscout server to detect which feature families are available."""
+
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from dataclasses import asdict, dataclass
@@ -33,7 +33,7 @@ class ServerCapabilities:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ServerCapabilities":
+    def from_dict(cls, data: dict[str, Any]) -> ServerCapabilities:
         """Reconstruct a ServerCapabilities from its dict representation."""
         return cls(**data)
 
@@ -47,7 +47,7 @@ _PUMP_BATTERY_CHANGE = "Pump Battery Change"
 async def _optional(label: str, coro: Any, default: Any) -> Any:
     try:
         return await coro
-    except (ApiError, asyncio.TimeoutError) as exc:
+    except (TimeoutError, ApiError) as exc:
         _LOGGER.debug("Optional capability probe %s degraded: %s", label, exc)
         return default
 

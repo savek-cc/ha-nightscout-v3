@@ -1,6 +1,6 @@
 """Tests for statistics.compute_all."""
-from __future__ import annotations
 
+from __future__ import annotations
 
 import pytest
 

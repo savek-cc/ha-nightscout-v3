@@ -1,9 +1,10 @@
 """DataUpdateCoordinator with staggered fast / change-detect / stats cycles."""
+
 from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -176,7 +177,7 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._last_modified_cache["treatments"] = treatments_lm
 
     async def _backfill_entries(self, entries_lm: int) -> None:
-        """Initial sync: paginate backwards until we cover STATS_HISTORY_MAX_DAYS.
+        """Paginate backwards until we cover STATS_HISTORY_MAX_DAYS (initial sync).
 
         Two v3-API quirks shaped this loop:
 
@@ -199,7 +200,7 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         overall_oldest: int | None = None
         overall_newest: int | None = None
         max_iters = 200
-        for iter_n in range(1, max_iters + 1):
+        for _iter_n in range(1, max_iters + 1):
             batch = await self._client.get_entries(limit=1000, before_date=before)
             if not batch:
                 break
@@ -218,14 +219,15 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "nightscout_v3 backfill: server's before_date filter not "
                     "advancing (got min=%d, expected <%d). Stopping to prevent "
                     "runaway loop.",
-                    server_min, before,
+                    server_min,
+                    before,
                 )
                 break
             before = server_min
         else:
             _LOGGER.warning(
-                "nightscout_v3 backfill reached max_iters=%d without short batch; "
-                "stopping anyway.", max_iters,
+                "nightscout_v3 backfill reached max_iters=%d without short batch; stopping anyway.",
+                max_iters,
             )
         if overall_oldest is not None:
             await self._store.update_sync_state(
@@ -265,17 +267,20 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # refresh (re-filter happens at _build_payload time).
         since = _day_ago_ms(2)
         self._recent_treatments = await self._client.get_treatments(
-            since_date=since, limit=500,
+            since_date=since,
+            limit=500,
         )
 
         note_candidates = await self._client.get_treatments(event_type="Note", limit=1)
         if not note_candidates:
             note_candidates = await self._client.get_treatments(event_type="Announcement", limit=1)
-        self._last_note = (note_candidates[0].get("notes") if note_candidates else None)
+        self._last_note = note_candidates[0].get("notes") if note_candidates else None
 
     async def _stats_cycle(self) -> None:
-        enabled = sorted(set(self.config_entry.options.get(OPT_STATS_WINDOWS, [MANDATORY_STATS_WINDOW])) |
-                         {MANDATORY_STATS_WINDOW})
+        enabled = sorted(
+            set(self.config_entry.options.get(OPT_STATS_WINDOWS, [MANDATORY_STATS_WINDOW]))
+            | {MANDATORY_STATS_WINDOW}
+        )
         low = self.config_entry.options.get(OPT_TIR_LOW, DEFAULT_TIR_LOW)
         high = self.config_entry.options.get(OPT_TIR_HIGH, DEFAULT_TIR_HIGH)
         vlow = self.config_entry.options.get(OPT_TIR_VERY_LOW, DEFAULT_TIR_VERY_LOW)
@@ -286,9 +291,14 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if w not in ALLOWED_STATS_WINDOWS:
                 continue
             entries = await self._store.entries_in_window(days=w)
-            payload = compute_all(entries, window_days=w,
-                                  tir_low=low, tir_high=high,
-                                  tir_very_low=vlow, tir_very_high=vhigh)
+            payload = compute_all(
+                entries,
+                window_days=w,
+                tir_low=low,
+                tir_high=high,
+                tir_very_low=vlow,
+                tir_very_high=vhigh,
+            )
             payload["hourly_profile_summary"] = payload["hourly_profile"]
             agp_rows = payload["agp_percentiles"]
             payload["agp_summary"] = {
@@ -308,14 +318,16 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         entries = getattr(self, "_latest_entries", [])
         ds = getattr(self, "_latest_devicestatus", None) or {}
         stats = getattr(self, "_stats", {})
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         carbs_today = _carbs_since_local_midnight(self._recent_treatments, self.hass)
 
         bg = _bg_block(entries, now)
         pump = _pump_block(ds, self._recent_treatments, now)
         loop = _loop_block(ds, now)
         uploader = _uploader_block(ds, now)
-        care = _care_block(self._treatment_age_cache, now, self._last_meal, carbs_today, self._last_note)
+        care = _care_block(
+            self._treatment_age_cache, now, self._last_meal, carbs_today, self._last_note
+        )
 
         return {
             "bg": bg,
@@ -328,6 +340,7 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
 
 # ---------- extractor helpers (pure) ----------
+
 
 def _day_ago_ms(days: int) -> int:
     return int((time.time() - days * 86_400) * 1000)
@@ -344,7 +357,8 @@ def _parse_created(t: dict[str, Any]) -> datetime | None:
 
 
 def _carbs_since_local_midnight(
-    treatments: list[dict[str, Any]], hass: HomeAssistant,
+    treatments: list[dict[str, Any]],
+    hass: HomeAssistant,
 ) -> float:
     """Sum `carbs` from treatments with `created_at` >= today's local midnight.
 
@@ -352,6 +366,7 @@ def _carbs_since_local_midnight(
     rollovers and even when no new treatments come in.
     """
     from homeassistant.util import dt as dt_util
+
     now_local = dt_util.now()
     midnight = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
     total = 0.0
@@ -369,8 +384,13 @@ def _carbs_since_local_midnight(
 
 def _bg_block(entries: list[dict[str, Any]], now: datetime) -> dict[str, Any]:
     if not entries:
-        return {"current_sgv": None, "delta_mgdl": None, "direction": None,
-                "trend_arrow": None, "stale_minutes": None}
+        return {
+            "current_sgv": None,
+            "delta_mgdl": None,
+            "direction": None,
+            "trend_arrow": None,
+            "stale_minutes": None,
+        }
     latest = entries[0]
     prev = entries[1] if len(entries) > 1 else None
     stale_minutes = int((now.timestamp() * 1000 - int(latest["date"])) / 60000)
@@ -472,10 +492,20 @@ def _parse_last_bolus(raw: Any) -> datetime | None:
 
 def _loop_block(ds: dict[str, Any], now: datetime) -> dict[str, Any]:
     if not ds:
-        return {"mode": None, "active": False, "eventual_bg": None, "target_bg": None,
-                "iob": None, "basaliob": None, "activity": None, "cob": None,
-                "sensitivity_ratio": None, "reason": None, "pred_bgs": None,
-                "last_enacted_age_minutes": None}
+        return {
+            "mode": None,
+            "active": False,
+            "eventual_bg": None,
+            "target_bg": None,
+            "iob": None,
+            "basaliob": None,
+            "activity": None,
+            "cob": None,
+            "sensitivity_ratio": None,
+            "reason": None,
+            "pred_bgs": None,
+            "last_enacted_age_minutes": None,
+        }
     openaps = ds.get("openaps") or {}
     iob = openaps.get("iob") or {}
     suggested = openaps.get("suggested") or {}

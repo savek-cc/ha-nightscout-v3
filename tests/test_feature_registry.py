@@ -1,4 +1,5 @@
 """Tests for FEATURE_REGISTRY."""
+
 from __future__ import annotations
 
 from custom_components.nightscout_v3.api.capabilities import ServerCapabilities

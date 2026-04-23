@@ -1,4 +1,5 @@
 """Tests for HistoryStore."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -42,8 +43,15 @@ async def test_insert_batch_and_window(store: HistoryStore) -> None:
 
 async def test_insert_batch_is_idempotent(store: HistoryStore) -> None:
     rows = [
-        {"identifier": "same", "date": 1, "sgv": 100, "direction": "Flat",
-         "type": "sgv", "noise": 0, "srvModified": 1}
+        {
+            "identifier": "same",
+            "date": 1,
+            "sgv": 100,
+            "direction": "Flat",
+            "type": "sgv",
+            "noise": 0,
+            "srvModified": 1,
+        }
     ]
     assert await store.insert_batch(rows) == 1
     assert await store.insert_batch(rows) == 0
@@ -53,16 +61,34 @@ async def test_sync_state_roundtrip(store: HistoryStore) -> None:
     await store.update_sync_state("entries", last_modified=5, oldest_date=1, newest_date=10)
     state = await store.get_sync_state("entries")
     assert state == SyncState(
-        collection="entries", last_modified=5, oldest_date=1, newest_date=10, updated_at_ms=state.updated_at_ms
+        collection="entries",
+        last_modified=5,
+        oldest_date=1,
+        newest_date=10,
+        updated_at_ms=state.updated_at_ms,
     )
 
 
 async def test_prune_removes_old(store: HistoryStore) -> None:
     rows = [
-        {"identifier": "old", "date": 1_000_000_000_000, "sgv": 90, "direction": "Flat",
-         "type": "sgv", "noise": 0, "srvModified": 1},
-        {"identifier": "new", "date": 1_745_000_000_000, "sgv": 150, "direction": "Flat",
-         "type": "sgv", "noise": 0, "srvModified": 2},
+        {
+            "identifier": "old",
+            "date": 1_000_000_000_000,
+            "sgv": 90,
+            "direction": "Flat",
+            "type": "sgv",
+            "noise": 0,
+            "srvModified": 1,
+        },
+        {
+            "identifier": "new",
+            "date": 1_745_000_000_000,
+            "sgv": 150,
+            "direction": "Flat",
+            "type": "sgv",
+            "noise": 0,
+            "srvModified": 2,
+        },
     ]
     await store.insert_batch(rows)
     removed = await store.prune(keep_days=7, now_ms=1_745_000_000_000)

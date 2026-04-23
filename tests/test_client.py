@@ -1,4 +1,5 @@
 """Tests for NightscoutV3Client."""
+
 from __future__ import annotations
 
 import aiohttp

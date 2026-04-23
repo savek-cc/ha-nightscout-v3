@@ -1,4 +1,5 @@
 """Base entity for nightscout_v3."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -18,7 +19,7 @@ class NightscoutEntity(CoordinatorEntity["NightscoutCoordinator"]):
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: "NightscoutCoordinator", feature: "FeatureDef") -> None:
+    def __init__(self, coordinator: NightscoutCoordinator, feature: FeatureDef) -> None:
         """Initialize the Nightscout entity for the given feature."""
         super().__init__(coordinator)
         self._feature = feature

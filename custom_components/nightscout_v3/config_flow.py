@@ -1,4 +1,5 @@
 """Config + Options flow for nightscout_v3."""
+
 from __future__ import annotations
 
 import hashlib
@@ -6,6 +7,7 @@ import logging
 from typing import Any
 from urllib.parse import urlparse
 
+import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.config_entries import (
     ConfigEntry,
@@ -21,7 +23,6 @@ from homeassistant.helpers.selector import (
     NumberSelectorConfig,
     NumberSelectorMode,
 )
-import homeassistant.helpers.config_validation as cv
 
 from .api.auth import JwtManager
 from .api.capabilities import probe_capabilities
@@ -157,9 +158,7 @@ class NightscoutConfigFlow(ConfigFlow, domain=DOMAIN):
     def _create_entry_from_capabilities(self) -> ConfigFlowResult:
         assert self._capabilities is not None and self._url is not None and self._token is not None
         title = urlparse(self._url).netloc or self._url
-        enabled = {
-            f.key: f.default_enabled for f in features_for_capabilities(self._capabilities)
-        }
+        enabled = {f.key: f.default_enabled for f in features_for_capabilities(self._capabilities)}
         return self.async_create_entry(
             title=title,
             data={
@@ -226,21 +225,17 @@ class NightscoutOptionsFlow(OptionsFlow):
                 schema[vol.Optional(f.key, default=current.get(f.key, f.default_enabled))] = bool
         return self.async_show_form(step_id="features", data_schema=vol.Schema(schema))
 
-    async def async_step_stats(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_stats(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the stats step."""
         if user_input is not None:
             chosen = sorted(
-                {int(w) for w in user_input.get(OPT_STATS_WINDOWS, [])}
-                | {MANDATORY_STATS_WINDOW}
+                {int(w) for w in user_input.get(OPT_STATS_WINDOWS, [])} | {MANDATORY_STATS_WINDOW}
             )
             return self.async_create_entry(
                 title="", data={**self._entry.options, OPT_STATS_WINDOWS: chosen}
             )
         current = [
-            str(w)
-            for w in self._entry.options.get(OPT_STATS_WINDOWS, [MANDATORY_STATS_WINDOW])
+            str(w) for w in self._entry.options.get(OPT_STATS_WINDOWS, [MANDATORY_STATS_WINDOW])
         ]
         schema = vol.Schema(
             {
@@ -262,26 +257,52 @@ class NightscoutOptionsFlow(OptionsFlow):
         schema = vol.Schema(
             {
                 vol.Optional(
-                    OPT_TIR_LOW, default=current.get(OPT_TIR_LOW, DEFAULT_TIR_LOW),
+                    OPT_TIR_LOW,
+                    default=current.get(OPT_TIR_LOW, DEFAULT_TIR_LOW),
                 ): NumberSelector(
-                    NumberSelectorConfig(min=40, max=120, step=1, mode=NumberSelectorMode.BOX, unit_of_measurement="mg/dL"),
+                    NumberSelectorConfig(
+                        min=40,
+                        max=120,
+                        step=1,
+                        mode=NumberSelectorMode.BOX,
+                        unit_of_measurement="mg/dL",
+                    ),
                 ),
                 vol.Optional(
-                    OPT_TIR_HIGH, default=current.get(OPT_TIR_HIGH, DEFAULT_TIR_HIGH),
+                    OPT_TIR_HIGH,
+                    default=current.get(OPT_TIR_HIGH, DEFAULT_TIR_HIGH),
                 ): NumberSelector(
-                    NumberSelectorConfig(min=120, max=300, step=1, mode=NumberSelectorMode.BOX, unit_of_measurement="mg/dL"),
+                    NumberSelectorConfig(
+                        min=120,
+                        max=300,
+                        step=1,
+                        mode=NumberSelectorMode.BOX,
+                        unit_of_measurement="mg/dL",
+                    ),
                 ),
                 vol.Optional(
                     OPT_TIR_VERY_LOW,
                     default=current.get(OPT_TIR_VERY_LOW, DEFAULT_TIR_VERY_LOW),
                 ): NumberSelector(
-                    NumberSelectorConfig(min=30, max=80, step=1, mode=NumberSelectorMode.BOX, unit_of_measurement="mg/dL"),
+                    NumberSelectorConfig(
+                        min=30,
+                        max=80,
+                        step=1,
+                        mode=NumberSelectorMode.BOX,
+                        unit_of_measurement="mg/dL",
+                    ),
                 ),
                 vol.Optional(
                     OPT_TIR_VERY_HIGH,
                     default=current.get(OPT_TIR_VERY_HIGH, DEFAULT_TIR_VERY_HIGH),
                 ): NumberSelector(
-                    NumberSelectorConfig(min=180, max=400, step=1, mode=NumberSelectorMode.BOX, unit_of_measurement="mg/dL"),
+                    NumberSelectorConfig(
+                        min=180,
+                        max=400,
+                        step=1,
+                        mode=NumberSelectorMode.BOX,
+                        unit_of_measurement="mg/dL",
+                    ),
                 ),
             }
         )
@@ -300,10 +321,17 @@ class NightscoutOptionsFlow(OptionsFlow):
                 vol.Optional(
                     OPT_POLL_FAST_SECONDS,
                     default=current.get(
-                        OPT_POLL_FAST_SECONDS, DEFAULT_POLL_FAST_SECONDS,
+                        OPT_POLL_FAST_SECONDS,
+                        DEFAULT_POLL_FAST_SECONDS,
                     ),
                 ): NumberSelector(
-                    NumberSelectorConfig(min=30, max=600, step=10, mode=NumberSelectorMode.BOX, unit_of_measurement="s"),
+                    NumberSelectorConfig(
+                        min=30,
+                        max=600,
+                        step=10,
+                        mode=NumberSelectorMode.BOX,
+                        unit_of_measurement="s",
+                    ),
                 ),
                 vol.Optional(
                     OPT_POLL_CHANGE_DETECT_MINUTES,
@@ -312,15 +340,28 @@ class NightscoutOptionsFlow(OptionsFlow):
                         DEFAULT_POLL_CHANGE_DETECT_MINUTES,
                     ),
                 ): NumberSelector(
-                    NumberSelectorConfig(min=1, max=60, step=1, mode=NumberSelectorMode.BOX, unit_of_measurement="min"),
+                    NumberSelectorConfig(
+                        min=1,
+                        max=60,
+                        step=1,
+                        mode=NumberSelectorMode.BOX,
+                        unit_of_measurement="min",
+                    ),
                 ),
                 vol.Optional(
                     OPT_POLL_STATS_MINUTES,
                     default=current.get(
-                        OPT_POLL_STATS_MINUTES, DEFAULT_POLL_STATS_MINUTES,
+                        OPT_POLL_STATS_MINUTES,
+                        DEFAULT_POLL_STATS_MINUTES,
                     ),
                 ): NumberSelector(
-                    NumberSelectorConfig(min=5, max=240, step=5, mode=NumberSelectorMode.BOX, unit_of_measurement="min"),
+                    NumberSelectorConfig(
+                        min=5,
+                        max=240,
+                        step=5,
+                        mode=NumberSelectorMode.BOX,
+                        unit_of_measurement="min",
+                    ),
                 ),
             }
         )

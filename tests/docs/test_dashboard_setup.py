@@ -1,4 +1,5 @@
 """Ensure dashboard-setup doc names every required HACS plugin + shipped asset."""
+
 from __future__ import annotations
 
 from pathlib import Path

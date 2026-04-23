@@ -1,4 +1,5 @@
 """Tests for capture_fixtures CLI arg parsing (no network)."""
+
 from __future__ import annotations
 
 import pytest

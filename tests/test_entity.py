@@ -1,4 +1,5 @@
 """Tests for NightscoutEntity base: unique_id, placeholders, available, extractor."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace

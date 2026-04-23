@@ -1,7 +1,8 @@
 """Tests for NightscoutCoordinator staggered-tick behavior."""
+
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import UTC, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -53,22 +54,51 @@ def entry() -> ConfigEntry:
 @pytest.fixture
 def mock_client():
     c = AsyncMock()
-    c.get_entries.return_value = [{"identifier": "e1", "date": 1, "sgv": 140, "direction": "Flat", "type": "sgv", "srvModified": 2}]
-    c.get_devicestatus.return_value = [{
-        "pump": {"battery": {"percent": 80}, "reservoir": 100.0, "status": {"status": "normal"},
-                  "extended": {"ActiveProfile": "P", "BaseBasalRate": 0.85, "LastBolus": "21.04. 12:00",
-                                "LastBolusAmount": 2.0, "TempBasalRemaining": 0}},
-        "openaps": {"iob": {"iob": 1.0, "basaliob": 0.5, "activity": 0.01},
-                     "suggested": {"eventualBG": 120, "targetBG": 105, "COB": 10,
-                                    "sensitivityRatio": 1.0, "reason": "ok",
-                                    "predBGs": {"IOB": [], "ZT": []}}},
-        "created_at": "2026-04-21T23:45:00Z",
-        "date": 1_745_009_700_000,
-        "uploaderBattery": 65,
-        "isCharging": False,
-    }]
+    c.get_entries.return_value = [
+        {
+            "identifier": "e1",
+            "date": 1,
+            "sgv": 140,
+            "direction": "Flat",
+            "type": "sgv",
+            "srvModified": 2,
+        }
+    ]
+    c.get_devicestatus.return_value = [
+        {
+            "pump": {
+                "battery": {"percent": 80},
+                "reservoir": 100.0,
+                "status": {"status": "normal"},
+                "extended": {
+                    "ActiveProfile": "P",
+                    "BaseBasalRate": 0.85,
+                    "LastBolus": "21.04. 12:00",
+                    "LastBolusAmount": 2.0,
+                    "TempBasalRemaining": 0,
+                },
+            },
+            "openaps": {
+                "iob": {"iob": 1.0, "basaliob": 0.5, "activity": 0.01},
+                "suggested": {
+                    "eventualBG": 120,
+                    "targetBG": 105,
+                    "COB": 10,
+                    "sensitivityRatio": 1.0,
+                    "reason": "ok",
+                    "predBGs": {"IOB": [], "ZT": []},
+                },
+            },
+            "created_at": "2026-04-21T23:45:00Z",
+            "date": 1_745_009_700_000,
+            "uploaderBattery": 65,
+            "isCharging": False,
+        }
+    ]
     c.get_treatments.return_value = []
-    c.get_last_modified.return_value = {"collections": {"entries": 1, "devicestatus": 2, "treatments": 3}}
+    c.get_last_modified.return_value = {
+        "collections": {"entries": 1, "devicestatus": 2, "treatments": 3}
+    }
     return c
 
 
@@ -106,6 +136,7 @@ async def test_backfill_paginates_until_short_batch(
 ) -> None:
     """Initial sync must paginate via before_date, not stop after 1 batch."""
     import time as _time
+
     now_ms = int(_time.time() * 1000)
     step = 300_000  # 5 minutes
     batch1 = [
@@ -127,10 +158,12 @@ async def test_backfill_paginates_until_short_batch(
     assert len(calls) == 2, "second batch had <1000 docs, loop must stop after it"
     assert calls[0].kwargs["before_date"] is None
     assert calls[1].kwargs["before_date"] == batch1_min
-    assert all("since_date" not in c.kwargs for c in calls), \
+    assert all("since_date" not in c.kwargs for c in calls), (
         "date$gte on same request as date$lt gets the $lt silently dropped by v3"
-    assert all("last_modified" not in c.kwargs for c in calls), \
+    )
+    assert all("last_modified" not in c.kwargs for c in calls), (
         "srvModified filter must not be sent on initial sync"
+    )
     state = await store.get_sync_state("entries")
     assert state is not None
     assert state.last_modified == 42
@@ -147,6 +180,7 @@ async def test_backfill_bails_out_when_server_ignores_before_date(
     used to produce an endless loop hammering the server.
     """
     import time as _time
+
     now_ms = int(_time.time() * 1000)
     step = 300_000
     same_batch = [
@@ -187,6 +221,7 @@ async def test_incremental_entries_extends_window(
 def test_parse_last_bolus_handles_aaps_formats() -> None:
     """AAPS emits DD.MM.YY or DD.MM. timestamps — parse both, reject junk."""
     from custom_components.nightscout_v3.coordinator import _parse_last_bolus
+
     assert _parse_last_bolus(None) is None
     assert _parse_last_bolus("") is None
     assert _parse_last_bolus("null") is None
@@ -202,16 +237,26 @@ def test_parse_last_bolus_handles_aaps_formats() -> None:
 
 def test_temp_basal_rate_reads_latest_active_treatment() -> None:
     """Temp Basal rate must come from an unexpired Temp Basal treatment."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
+
     from custom_components.nightscout_v3.coordinator import _temp_basal_rate
-    now = datetime(2026, 4, 23, 8, 30, tzinfo=timezone.utc)
+
+    now = datetime(2026, 4, 23, 8, 30, tzinfo=UTC)
 
     # Active now: started 10 min ago, duration 30 min → still running
-    active = {"eventType": "Temp Basal", "created_at": (now - timedelta(minutes=10)).isoformat(),
-              "duration": 30, "rate": 0.8}
+    active = {
+        "eventType": "Temp Basal",
+        "created_at": (now - timedelta(minutes=10)).isoformat(),
+        "duration": 30,
+        "rate": 0.8,
+    }
     # Elapsed: 90 min ago, duration 60 min → gone
-    elapsed = {"eventType": "Temp Basal", "created_at": (now - timedelta(minutes=90)).isoformat(),
-               "duration": 60, "rate": 1.2}
+    elapsed = {
+        "eventType": "Temp Basal",
+        "created_at": (now - timedelta(minutes=90)).isoformat(),
+        "duration": 60,
+        "rate": 1.2,
+    }
 
     # Latest (active) wins over older docs
     assert _temp_basal_rate({}, [active, elapsed], now) == 0.8
@@ -226,18 +271,20 @@ def test_temp_basal_rate_reads_latest_active_treatment() -> None:
 
 def test_carbs_since_local_midnight_filters_correctly(hass: HomeAssistant) -> None:
     """Only treatments with created_at >= today's local midnight should count."""
-    from custom_components.nightscout_v3.coordinator import _carbs_since_local_midnight
     from homeassistant.util import dt as dt_util
+
+    from custom_components.nightscout_v3.coordinator import _carbs_since_local_midnight
+
     now_local = dt_util.now()
     midnight = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
     two_hours_before_midnight = (midnight - timedelta(hours=2)).isoformat()
     two_hours_after_midnight = (midnight + timedelta(hours=2)).isoformat()
     treatments = [
         {"created_at": two_hours_before_midnight, "carbs": 100},  # yesterday — skip
-        {"created_at": two_hours_after_midnight, "carbs": 30},    # today
+        {"created_at": two_hours_after_midnight, "carbs": 30},  # today
         {"created_at": two_hours_after_midnight, "carbs": None},  # no carbs — skip
-        {"created_at": "", "carbs": 50},                          # no ts — skip
-        {"created_at": two_hours_after_midnight, "carbs": 45},    # today
+        {"created_at": "", "carbs": 50},  # no ts — skip
+        {"created_at": two_hours_after_midnight, "carbs": 45},  # today
     ]
     assert _carbs_since_local_midnight(treatments, hass) == 75.0
 

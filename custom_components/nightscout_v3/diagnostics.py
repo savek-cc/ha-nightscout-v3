@@ -1,4 +1,5 @@
 """Redacted diagnostics dump."""
+
 from __future__ import annotations
 
 import time

@@ -1,4 +1,5 @@
 """Exceptions raised by the Nightscout v3 API client."""
+
 from __future__ import annotations
 
 

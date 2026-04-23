@@ -1,4 +1,5 @@
 """Diagnostics redaction tests."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -19,18 +20,30 @@ from custom_components.nightscout_v3.diagnostics import (
 @pytest.fixture
 def caps() -> ServerCapabilities:
     return ServerCapabilities(
-        units="mg/dl", has_openaps=True, has_pump=True, has_uploader_battery=True,
-        has_entries=True, has_treatments_sensor_change=True, has_treatments_site_change=True,
-        has_treatments_insulin_change=True, has_treatments_pump_battery_change=True,
+        units="mg/dl",
+        has_openaps=True,
+        has_pump=True,
+        has_uploader_battery=True,
+        has_entries=True,
+        has_treatments_sensor_change=True,
+        has_treatments_site_change=True,
+        has_treatments_insulin_change=True,
+        has_treatments_pump_battery_change=True,
         last_probed_at_ms=0,
     )
 
 
 async def test_diagnostics_redacts_url_and_token(hass: HomeAssistant, caps) -> None:
     entry = MockConfigEntry(
-        domain=DOMAIN, unique_id="uid-diag", title="Test",
-        data={"url": "https://secret.example", "access_token": "SECRET",
-              "capabilities": caps.to_dict(), "capabilities_probed_at": 0},
+        domain=DOMAIN,
+        unique_id="uid-diag",
+        title="Test",
+        data={
+            "url": "https://secret.example",
+            "access_token": "SECRET",
+            "capabilities": caps.to_dict(),
+            "capabilities_probed_at": 0,
+        },
         options={"enabled_features": {}, "stats_windows": [14]},
     )
     entry.add_to_hass(hass)
@@ -57,9 +70,15 @@ async def test_diagnostics_redacts_reason_and_notes(hass: HomeAssistant, caps) -
     pins the invariant on the actual diagnostics output.
     """
     entry = MockConfigEntry(
-        domain=DOMAIN, unique_id="uid-diag-reason", title="Test",
-        data={"url": "https://x.example", "access_token": "t",
-              "capabilities": caps.to_dict(), "capabilities_probed_at": 0},
+        domain=DOMAIN,
+        unique_id="uid-diag-reason",
+        title="Test",
+        data={
+            "url": "https://x.example",
+            "access_token": "t",
+            "capabilities": caps.to_dict(),
+            "capabilities_probed_at": 0,
+        },
         options={"enabled_features": {}, "stats_windows": [14]},
     )
     entry.add_to_hass(hass)
@@ -122,9 +141,7 @@ def test_collect_runtime_full_snapshot(caps) -> None:
 
 def test_collect_runtime_without_jwt_state(caps) -> None:
     jwt_manager = SimpleNamespace(state=None)
-    coordinator = SimpleNamespace(
-        last_update_success=False, last_tick_summary={}, data=None
-    )
+    coordinator = SimpleNamespace(last_update_success=False, last_tick_summary={}, data=None)
     runtime_data = SimpleNamespace(
         coordinator=coordinator, jwt_manager=jwt_manager, capabilities=caps
     )

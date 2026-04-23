@@ -1,4 +1,5 @@
 """Runtime-data dataclass for nightscout_v3."""
+
 from __future__ import annotations
 
 from collections.abc import Callable

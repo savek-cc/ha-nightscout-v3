@@ -1,4 +1,5 @@
 """Ensure architecture doc names the load-bearing modules."""
+
 from __future__ import annotations
 
 from pathlib import Path

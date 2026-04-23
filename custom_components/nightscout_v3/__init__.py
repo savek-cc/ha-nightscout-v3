@@ -1,4 +1,5 @@
 """Nightscout v3 integration setup."""
+
 from __future__ import annotations
 
 import logging
@@ -64,6 +65,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NightscoutConfigEntry) -
 
     db_path = hass.config.path(".storage", f"nightscout_v3_{entry.entry_id}.db")
     from pathlib import Path
+
     store = await HistoryStore.open(Path(db_path))
     if await store.is_corrupt():
         await store.recover_from_corruption()

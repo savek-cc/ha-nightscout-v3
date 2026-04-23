@@ -1,4 +1,5 @@
 """aiosqlite-backed rolling history for Nightscout v3 entries."""
+
 from __future__ import annotations
 
 import json
@@ -61,7 +62,7 @@ class HistoryStore:
         self._db = db
 
     @classmethod
-    async def open(cls, path: Path) -> "HistoryStore":
+    async def open(cls, path: Path) -> HistoryStore:
         """Open (or create) the history store at the given path."""
         path.parent.mkdir(parents=True, exist_ok=True)
         db = await aiosqlite.connect(path)
@@ -107,7 +108,8 @@ class HistoryStore:
         async with self._db.execute("SELECT COUNT(*) AS n FROM entries") as cur:
             before = (await cur.fetchone())["n"]
         await self._db.executemany(
-            "INSERT OR IGNORE INTO entries (identifier, date, sgv, direction, type, noise, srv_modified) "
+            "INSERT OR IGNORE INTO entries "
+            "(identifier, date, sgv, direction, type, noise, srv_modified) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             rows,
         )
@@ -116,7 +118,9 @@ class HistoryStore:
             after = (await cur.fetchone())["n"]
         return int(after - before)
 
-    async def entries_in_window(self, days: int, *, now_ms: int | None = None) -> list[dict[str, Any]]:
+    async def entries_in_window(
+        self, days: int, *, now_ms: int | None = None
+    ) -> list[dict[str, Any]]:
         """Return entries within the last `days` days, oldest first."""
         now_ms = now_ms or int(time.time() * 1000)
         cutoff = now_ms - days * 86_400_000
@@ -143,7 +147,8 @@ class HistoryStore:
         """Upsert the sync state row for a collection."""
         now_ms = int(time.time() * 1000)
         await self._db.execute(
-            "INSERT INTO sync_state (collection, last_modified, oldest_date, newest_date, updated_at_ms) "
+            "INSERT INTO sync_state "
+            "(collection, last_modified, oldest_date, newest_date, updated_at_ms) "
             "VALUES (?, ?, ?, ?, ?) "
             "ON CONFLICT(collection) DO UPDATE SET "
             "  last_modified = excluded.last_modified,"

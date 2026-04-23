@@ -1,4 +1,5 @@
 """Tests for the JWT manager."""
+
 from __future__ import annotations
 
 import time
@@ -11,7 +12,6 @@ from custom_components.nightscout_v3.api.auth import JwtManager
 from custom_components.nightscout_v3.api.exceptions import ApiError, AuthError
 from tests.conftest import load_fixture
 
-
 BASE_URL = "https://ns.example"
 TOKEN = "accesstoken-testuser"
 
@@ -21,9 +21,7 @@ def payload() -> dict:
     return load_fixture("auth_request_success")
 
 
-async def test_initial_exchange_stores_jwt(
-    aiohttp_client_session, payload: dict, freezer
-) -> None:
+async def test_initial_exchange_stores_jwt(aiohttp_client_session, payload: dict, freezer) -> None:
     freezer.move_to("2026-04-21T00:00:00Z")
     with aioresponses() as m:
         m.get(
@@ -87,9 +85,7 @@ async def test_refresh_retries_with_backoff_on_5xx(
     assert sleeps[:3] == [1, 2, 4]
 
 
-async def test_refresh_gives_up_after_max_attempts(
-    aiohttp_client_session, monkeypatch
-) -> None:
+async def test_refresh_gives_up_after_max_attempts(aiohttp_client_session, monkeypatch) -> None:
     async def fake_sleep(_d: float) -> None: ...
 
     monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
@@ -116,9 +112,7 @@ async def test_state_property_before_and_after_exchange(
     assert mgr.state.token == payload["token"]
 
 
-async def test_refresh_forces_new_exchange(
-    aiohttp_client_session, payload: dict
-) -> None:
+async def test_refresh_forces_new_exchange(aiohttp_client_session, payload: dict) -> None:
     """refresh() forces a new exchange regardless of current TTL."""
     with aioresponses() as m:
         m.get(
@@ -140,6 +134,7 @@ async def test_initial_exchange_raises_api_error_on_403(
     aiohttp_client_session, monkeypatch
 ) -> None:
     """Non-200/non-401/non-5xx status maps to ApiError (not AuthError)."""
+
     async def fake_sleep(_d: float) -> None: ...
 
     monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
@@ -165,6 +160,7 @@ async def test_initial_exchange_raises_api_error_on_network_error(
     aiohttp_client_session, monkeypatch
 ) -> None:
     """aiohttp.ClientError before response re-raises as ApiError."""
+
     async def fake_sleep(_d: float) -> None: ...
 
     monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
@@ -189,6 +185,7 @@ async def test_initial_exchange_raises_api_error_on_malformed_jwt_body(
     'gave up after N attempts' — both must surface the underlying
     cause and the line-95 branch must execute at least once.
     """
+
     async def fake_sleep(_d: float) -> None: ...
 
     monkeypatch.setattr("custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep)
@@ -212,9 +209,12 @@ async def test_malformed_jwt_error_does_not_leak_token_body(
     Regression test for the final release review C-1: the exception
     propagates to a DEBUG log at the entry-level refresh handler.
     """
+
     async def fake_sleep(_d: float) -> None: ...
+
     monkeypatch.setattr(
-        "custom_components.nightscout_v3.api.auth.asyncio.sleep", fake_sleep,
+        "custom_components.nightscout_v3.api.auth.asyncio.sleep",
+        fake_sleep,
     )
     leaked_jwt = "eyJLEAKME.eyJhbGciOiJIUzI1NiJ9.SIGSIGSIG"
     with aioresponses() as m:

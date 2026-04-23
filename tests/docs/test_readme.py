@@ -1,4 +1,5 @@
 """Ensure README advertises the main user-visible promises."""
+
 from __future__ import annotations
 
 from pathlib import Path

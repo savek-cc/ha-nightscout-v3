@@ -7,18 +7,19 @@ If the config entry title differs, users search-and-replace as documented in
 key resolves to a real feature in ``FEATURE_REGISTRY`` or
 ``stats_feature_defs(14)`` (14 d is a mandatory window, see spec §4.5).
 """
+
 from __future__ import annotations
 
 import re
 from pathlib import Path
 
 import yaml
+from homeassistant.const import Platform
 
 from custom_components.nightscout_v3.feature_registry import (
     FEATURE_REGISTRY,
     stats_feature_defs,
 )
-from homeassistant.const import Platform
 
 DASH = Path("dashboards/nightscout.yaml")
 
@@ -38,7 +39,7 @@ def test_dashboard_parses() -> None:
 def test_has_required_views() -> None:
     data = _load_dashboard()
     titles = {v.get("title") for v in data["views"]}
-    assert REQUIRED_VIEWS <= titles, f"missing views: {REQUIRED_VIEWS - titles}"
+    assert titles >= REQUIRED_VIEWS, f"missing views: {REQUIRED_VIEWS - titles}"
 
 
 def _known_sensor_keys() -> set[str]:

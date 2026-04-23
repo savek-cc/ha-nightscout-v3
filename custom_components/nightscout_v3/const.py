@@ -1,4 +1,5 @@
 """Constants for nightscout_v3."""
+
 from __future__ import annotations
 
 from typing import Final
@@ -8,7 +9,7 @@ MANUFACTURER: Final = "Nightscout"
 MODEL: Final = "v3 API"
 
 CONF_URL: Final = "url"
-CONF_ACCESS_TOKEN: Final = "access_token"
+CONF_ACCESS_TOKEN: Final = "access_token"  # noqa: S105  # config-entry key name, not a credential value
 CONF_CAPABILITIES: Final = "capabilities"
 CONF_CAPABILITIES_PROBED_AT: Final = "capabilities_probed_at"
 
