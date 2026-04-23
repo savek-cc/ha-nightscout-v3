@@ -95,15 +95,87 @@ rules:
       Every entity uses `_attr_has_entity_name = True` and
       `_attr_translation_key` driven by `FeatureDef.translation_key`;
       translations shipped in strings.json and translations/*.json.
-  # Remaining Gold rules tracked for completion:
-  # docs-examples — awaiting verification that dashboards/examples/ carries actionable snippets
-  # docs-known-limitations — README section pending
-  # docs-supported-devices — README section pending (AAPS/Dexcom/Trio/etc.)
-  # docs-use-cases — README section pending
-  # entity-category — FeatureDef.entity_category field pending
-  # entity-disabled-by-default — propagate FeatureDef.default_enabled to entity_registry_enabled_default
-  # exception-translations — strings.json `exceptions` block + HomeAssistantError translation_domain/key
-  # icon-translations — icons.json + drop `_attr_icon = feature.icon`
-  # reconfiguration-flow — async_step_reconfigure in NightscoutConfigFlow
-  # repair-issues — ir.async_create_issue on unrecoverable probe failures
-  # stale-devices — async_remove_config_entry_device or justified exempt
+  docs-examples:
+    status: done
+    comment: >
+      Three copy-paste dashboard YAML snippets under
+      `dashboards/examples/` (bg_card, loop_card, agp_card) — each
+      referenced from the README with a short purpose line.
+  docs-known-limitations:
+    status: done
+    comment: See README "Known limitations" section.
+  docs-supported-devices:
+    status: done
+    comment: >
+      README states Nightscout >= 15.0.0 servers are supported; AAPS and
+      Loop uploaders are the primary tested sources. Individual CGM
+      hardware is out of scope for this integration (hardware support
+      lives with the Nightscout server + uploader combination).
+  docs-use-cases:
+    status: done
+    comment: See README "Use cases" section.
+  entity-category:
+    status: done
+    comment: >
+      `FeatureDef.entity_category` carried through `NightscoutEntity`.
+      Battery, staleness, loop-age, sensor/site/insulin/pump-battery age
+      sensors are marked `EntityCategory.DIAGNOSTIC`.
+  entity-disabled-by-default:
+    status: done
+    comment: >
+      `FeatureDef.default_enabled=False` on noisy/advanced features
+      (`loop_reason`, `loop_pred_bgs`, `care_last_note`, `stat_lbgi`,
+      `stat_hbgi`, `stat_hourly_profile`, `stat_agp`). Enforced through
+      the options-flow enabled-features dict on platform setup, which
+      is the canonical place for a capability-gated integration.
+  exception-translations:
+    status: done
+    comment: >
+      `ConfigEntryAuthFailed` / `ConfigEntryNotReady` raises in setup use
+      `translation_domain` + `translation_key` with placeholders; the
+      `exceptions` block in `strings.json` carries the localized text.
+  icon-translations:
+    status: done
+    comment: >
+      `icons.json` carries 46 sensor icons keyed by `translation_key`.
+      `NightscoutEntity` no longer sets `_attr_icon`; feature registry no
+      longer stores an `icon=` field.
+  reconfiguration-flow:
+    status: done
+    comment: >
+      `NightscoutConfigFlow.async_step_reconfigure` lets the user change
+      URL and/or token, re-probes capabilities, and aborts on
+      `unique_id_mismatch` when the new URL points at a different
+      Nightscout server already configured.
+  repair-issues:
+    status: done
+    comment: >
+      On 404 from `/api/v3/status` during capability probe (Nightscout
+      < 15.0) the integration creates a persistent repair issue keyed
+      on the entry; cleared on every successful probe. Translation
+      strings in `issues.server_incompatible`.
+  stale-devices:
+    status: done
+    comment: >
+      `async_remove_config_entry_device` returns True — one-device-per-
+      entry integration; the device is re-created on the next setup if
+      the entry still exists.
+  # Platinum
+  async-dependency:
+    status: done
+    comment: >
+      All I/O goes through async libraries: aiohttp for the Nightscout
+      REST API, aiosqlite for the history store. Sync FS operations
+      (mkdir, rename) run via `hass.async_add_executor_job` / `asyncio.to_thread`.
+  inject-websession:
+    status: done
+    comment: >
+      `__init__.py`, `config_flow.py` and all other sites acquire the
+      aiohttp session via `async_get_clientsession(hass)`. No
+      `aiohttp.ClientSession()` construction in the component.
+  strict-typing:
+    status: done
+    comment: >
+      `mypy --strict` passes on `custom_components/nightscout_v3/`
+      (configured in `pyproject.toml` via `[tool.mypy] strict = true`,
+      enforced in CI through the mypy pre-commit hook).
