@@ -5,6 +5,16 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.1
+    hooks:
+      - id: mypy
+        files: ^custom_components/nightscout_v3/
+        args: [--strict, --ignore-missing-imports]
+        additional_dependencies:
+          - aiohttp>=3.9
+          - aiosqlite>=0.20
+          - voluptuous>=0.14
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:

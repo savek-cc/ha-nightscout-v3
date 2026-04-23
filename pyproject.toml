@@ -25,3 +25,14 @@ branch = true
 
 [tool.coverage.report]
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+# HA and some of our runtime deps don't ship type stubs. Silence the
+# "cannot find implementation" noise without relaxing any of the
+# actual correctness checks.
+ignore_missing_imports = true
+# Tests use AsyncMock / MagicMock aggressively; enforce strict typing
+# on production code only.
+exclude = ["tests/", "build/"]
