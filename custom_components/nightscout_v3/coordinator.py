@@ -11,6 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .api.capabilities import ServerCapabilities
 from .api.client import NightscoutV3Client
@@ -94,6 +95,12 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_meal: dict[str, Any] | None = None
         self._recent_treatments: list[dict[str, Any]] = []
         self._last_note: str | None = None
+        # explicit defaults for data populated in cycle methods —
+        # previously these were read via `getattr(self, ..., default)`
+        # fallbacks that hid attribute-lifecycle bugs.
+        self._latest_entries: list[dict[str, Any]] = []
+        self._latest_devicestatus: dict[str, Any] | None = None
+        self._stats: dict[int, dict[str, Any]] = {}
 
     @property
     def capabilities(self) -> ServerCapabilities:
@@ -286,7 +293,7 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         vlow = self.config_entry.options.get(OPT_TIR_VERY_LOW, DEFAULT_TIR_VERY_LOW)
         vhigh = self.config_entry.options.get(OPT_TIR_VERY_HIGH, DEFAULT_TIR_VERY_HIGH)
 
-        self._stats: dict[int, dict[str, Any]] = {}
+        self._stats = {}
         for w in enabled:
             if w not in ALLOWED_STATS_WINDOWS:
                 continue
@@ -315,9 +322,9 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._stats_dirty = False
 
     def _build_payload(self) -> dict[str, Any]:
-        entries = getattr(self, "_latest_entries", [])
-        ds = getattr(self, "_latest_devicestatus", None) or {}
-        stats = getattr(self, "_stats", {})
+        entries = self._latest_entries
+        ds = self._latest_devicestatus or {}
+        stats = self._stats
         now = datetime.now(UTC)
         carbs_today = _carbs_since_local_midnight(self._recent_treatments, self.hass)
 
@@ -365,8 +372,6 @@ def _carbs_since_local_midnight(
     Recomputed on every build so the value stays correct across day
     rollovers and even when no new treatments come in.
     """
-    from homeassistant.util import dt as dt_util
-
     now_local = dt_util.now()
     midnight = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
     total = 0.0
@@ -478,7 +483,7 @@ def _parse_last_bolus(raw: Any) -> datetime | None:
     if raw in (None, "", "null"):
         return None
     s = str(raw).strip()
-    now = datetime.now().astimezone()
+    now = dt_util.now()
     for fmt in ("%d.%m.%y %H:%M", "%d.%m. %H:%M"):
         try:
             parsed = datetime.strptime(s, fmt)

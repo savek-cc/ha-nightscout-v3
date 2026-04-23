@@ -220,11 +220,11 @@ async def test_incremental_entries_extends_window(
 
 def test_loop_block_returns_all_none_for_empty_devicestatus() -> None:
     """Empty devicestatus payload yields all-None loop fields (no crash)."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from custom_components.nightscout_v3.coordinator import _loop_block
 
-    now = datetime(2026, 4, 23, 8, 30, tzinfo=timezone.utc)
+    now = datetime(2026, 4, 23, 8, 30, tzinfo=UTC)
     result = _loop_block({}, now)
     assert result["mode"] is None
     assert result["active"] is False

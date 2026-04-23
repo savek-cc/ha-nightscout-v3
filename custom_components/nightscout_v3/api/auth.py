@@ -18,9 +18,9 @@ MAX_REFRESH_ATTEMPTS = 5
 _BACKOFF_BASE = 1.0
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class JwtState:
-    """Last-known JWT state."""
+    """Last-known JWT state (immutable — refresh replaces the whole value)."""
 
     token: str
     iat: int

@@ -80,7 +80,58 @@ A 5-view dashboard (Übersicht, Trend, AGP, Statistik, Loop) ships under
 
 Full setup walkthrough: **[docs/dashboard-setup.md](docs/dashboard-setup.md)**.
 
-Three copy-paste snippets live under `dashboards/examples/`.
+Three copy-paste snippets live under
+[`dashboards/examples/`](dashboards/examples/):
+
+- [`bg_card.yaml`](dashboards/examples/bg_card.yaml) — the BG "pill"
+  with current reading, delta, direction arrow and staleness badge.
+- [`loop_card.yaml`](dashboards/examples/loop_card.yaml) — closed-loop
+  status, IOB/COB, eventual-BG and last-enacted age.
+- [`agp_card.yaml`](dashboards/examples/agp_card.yaml) — the AGP
+  percentile band rendered via `apexcharts-card` from the
+  `stat_agp_<window>d` sensor's `extra_state_attributes`.
+
+## Use cases
+
+- **Carer dashboard** on a tablet in the kitchen showing the child's
+  BG, direction arrow, IOB/COB and AAPS loop status live.
+- **TIR tracking** — per-week/month tile on the HA mobile app driven
+  by `stat_tir_in_range_14d` / `stat_cv_14d`; pair with a line chart
+  over the `stat_mean_*d` sensors for a compact report view.
+- **Loop-intervention alert** — automation on
+  `binary_sensor.nightscout_<user>_loop_active` flipping off for more
+  than 20 minutes (AAPS stopped enacting) → Telegram / mobile
+  notification.
+- **Consumable-age reminders** — automations on the DIAGNOSTIC
+  `care_sage_days` / `care_iage_days` / `care_cage_days` sensors
+  triggering at user-defined thresholds ("sensor over 9 days —
+  change today").
+- **Historical export / merge** — pair with HA's long-term statistics
+  for multi-year trend analysis that's more compact than the
+  upstream Nightscout web UI.
+
+## Known limitations
+
+- **Read-only v0.1.x.** No careportal writes yet; adding treatments
+  from HA is on the v2 roadmap.
+- **AAPS `LastBolus` timestamp parsing is best-effort.** AAPS emits a
+  free-text `DD.MM.YY HH:MM` (or older `DD.MM. HH:MM`) string on the
+  `pump.extended` block. Any other format parses as None and the
+  sensor shows `unknown` until the next recognised value arrives.
+- **AGP percentile and hourly-profile sensors use UTC hour-of-day**
+  for bucketing, not the user's local tz. Close to midnight local
+  time this shifts one bucket. Numerical stats (CV, GMI, HbA1c,
+  mean, SD, TIR) are not affected.
+- **Temp basal rate** is sourced from `treatments eventType="Temp
+  Basal"` rather than `devicestatus.pump.extended.TempBasalAbsoluteRate`,
+  because AAPS does not reliably populate the devicestatus field
+  during an active temp.
+- **No built-in migration** from HA's Core `nightscout` integration.
+  This one runs alongside it under a different domain
+  (`nightscout_v3`); entity IDs are prefixed accordingly.
+- **HACS distribution only.** No plans to ship into Home Assistant
+  Core; the API-v3 reliance and stats pipeline are outside the scope
+  of what the core integration maintains.
 
 ## Removing the integration
 
@@ -92,8 +143,10 @@ Three copy-paste snippets live under `dashboards/examples/`.
 3. In HACS → **Integrations → Nightscout v3 → ⋯ → Remove** to uninstall
    the integration files. Restart HA.
 
-No external state is left behind; the SQLite history store lives under the
-integration's own `.storage` dir and is removed with the config entry.
+No external state is left behind. The SQLite history store lives under
+`<config>/nightscout_v3/history_<entry_id>.db` and is removed with the
+config entry. (Pre-0.1.1 instances stored the DB under `.storage/`; the
+integration migrates it forward on first setup after the upgrade.)
 
 ## Reauthentication
 
@@ -110,12 +163,18 @@ against). Each gets its own config entry, device, and entity prefix.
 
 ## Quality Scale
 
-Targeting **Silver** (`custom_components/nightscout_v3/quality_scale.yaml`).
-`scripts/verify_silver.py` is the static gate that checks every Silver rule
-is `done` or explicitly `exempt` with a comment. The `docs-*` and `brands`
-rules depend on the upstream Home Assistant docs / brands repositories and
-flip to `done` once the corresponding PRs are merged; see `quality_scale.yaml`
-for the current state.
+Bronze and Silver fully claimed. Most Gold rules are implemented
+(devices, entity-category, entity-device-class, entity-translations,
+icon-translations, exception-translations, reconfiguration-flow,
+repair-issues, stale-devices, docs-data-update,
+docs-supported-functions, docs-troubleshooting, docs-known-limitations,
+docs-use-cases, docs-examples). The remaining Gold items
+(`docs-supported-devices` — full Dexcom/Libre/AAPS matrix) and
+Platinum requirements (strict-typing enforced via `mypy --strict` in
+pre-commit; aiohttp session injected via `async_get_clientsession`;
+aiosqlite + aiohttp as fully-async dependencies) are all already met
+at the code level. See `custom_components/nightscout_v3/quality_scale.yaml`
+for the rule-by-rule status.
 
 ## Privacy & safety
 
