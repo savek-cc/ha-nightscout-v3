@@ -133,11 +133,6 @@ class NightscoutV3Client:
         headers = {
             "Authorization": f"Bearer {jwt}",
             "Accept": "application/json",
-            # Force a fresh TCP connection per request. aiohttp's shared-session
-            # keep-alive pool reused a half-closed connection between backfill
-            # batches and the second request hung in protocol.read() past the
-            # ClientTimeout. "Connection: close" disables reuse on both ends.
-            "Connection": "close",
         }
         qs = "&".join(f"{k}={quote(v, safe='$')}" for k, v in params)
         url = f"{self._base_url}{path}" + (f"?{qs}" if qs else "")
