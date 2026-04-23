@@ -218,6 +218,30 @@ async def test_incremental_entries_extends_window(
     assert state.newest_date == 250
 
 
+def test_loop_block_returns_all_none_for_empty_devicestatus() -> None:
+    """Empty devicestatus payload yields all-None loop fields (no crash)."""
+    from datetime import datetime, timezone
+
+    from custom_components.nightscout_v3.coordinator import _loop_block
+
+    now = datetime(2026, 4, 23, 8, 30, tzinfo=timezone.utc)
+    result = _loop_block({}, now)
+    assert result["mode"] is None
+    assert result["active"] is False
+    assert result["iob"] is None
+
+
+def test_parse_created_handles_bad_inputs() -> None:
+    """_parse_created returns None for missing, empty, and unparseable timestamps."""
+    from custom_components.nightscout_v3.coordinator import _parse_created
+
+    assert _parse_created({}) is None
+    assert _parse_created({"created_at": ""}) is None
+    assert _parse_created({"created_at": "garbage"}) is None
+    good = _parse_created({"created_at": "2026-04-23T08:30:00Z"})
+    assert good is not None and good.year == 2026
+
+
 def test_parse_last_bolus_handles_aaps_formats() -> None:
     """AAPS emits DD.MM.YY or DD.MM. timestamps — parse both, reject junk."""
     from custom_components.nightscout_v3.coordinator import _parse_last_bolus

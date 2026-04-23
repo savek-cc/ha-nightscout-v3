@@ -118,7 +118,7 @@ def _bucket_by_hour(entries: list[dict[str, Any]]) -> list[list[int]]:
 
 def _hourly_profile(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     buckets = _bucket_by_hour(entries)
-    out = []
+    out: list[dict[str, Any]] = []
     for h, xs in enumerate(buckets):
         if not xs:
             out.append({"hour": h, "mean": 0, "median": 0, "min": 0, "max": 0, "n": 0})
@@ -149,7 +149,7 @@ def _percentile(sorted_values: list[int], q: float) -> float:
 
 def _agp_percentiles(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     buckets = _bucket_by_hour(entries)
-    out = []
+    out: list[dict[str, Any]] = []
     for h, xs in enumerate(buckets):
         if not xs:
             out.append({"hour": h, "p5": 0, "p25": 0, "p50": 0, "p75": 0, "p95": 0, "n": 0})

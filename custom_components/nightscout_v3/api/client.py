@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from urllib.parse import quote
 
 import aiohttp
@@ -117,7 +117,7 @@ class NightscoutV3Client:
     async def _get(self, path: str, *, envelope: bool) -> dict[str, Any]:
         raw = await self._raw_get(path, [])
         if envelope and "result" in raw:
-            return raw["result"]
+            return cast(dict[str, Any], raw["result"])
         return raw
 
     async def _get_list(self, path: str, params: list[tuple[str, str]]) -> list[dict[str, Any]]:
@@ -148,6 +148,6 @@ class NightscoutV3Client:
                         raise ApiError(f"{resp.status} on {path}", status=resp.status)
                     if resp.status != 200:
                         raise ApiError(f"{resp.status} on {path}", status=resp.status)
-                    return await resp.json()
+                    return cast(dict[str, Any], await resp.json())
         except (aiohttp.ClientError, TimeoutError) as exc:
             raise ApiError(f"Network error on {path}: {exc}") from exc

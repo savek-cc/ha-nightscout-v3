@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import MANDATORY_STATS_WINDOW, OPT_ENABLED_FEATURES, OPT_STATS_WINDOWS
+from .coordinator import NightscoutCoordinator
 from .entity import NightscoutEntity
 from .feature_registry import FeatureDef, features_for_capabilities, stats_feature_defs
 from .models import NightscoutConfigEntry
@@ -48,10 +49,13 @@ async def async_setup_entry(
 class NightscoutSensor(NightscoutEntity, SensorEntity):
     """One coordinator-backed SensorEntity."""
 
-    def __init__(self, coordinator, feature: FeatureDef) -> None:
+    def __init__(self, coordinator: NightscoutCoordinator, feature: FeatureDef) -> None:
         """Initialize the Nightscout sensor for a feature."""
         super().__init__(coordinator, feature)
-        self._attr_device_class = feature.device_class
+        # FeatureDef.device_class is SensorDeviceClass | BinarySensorDeviceClass | None;
+        # on the sensor platform the non-None values are always Sensor-side.
+        if isinstance(feature.device_class, SensorDeviceClass):
+            self._attr_device_class = feature.device_class
         self._attr_state_class = feature.state_class
         self._attr_native_unit_of_measurement = feature.unit
 

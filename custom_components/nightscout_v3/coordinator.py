@@ -229,7 +229,7 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "nightscout_v3 backfill reached max_iters=%d without short batch; stopping anyway.",
                 max_iters,
             )
-        if overall_oldest is not None:
+        if overall_oldest is not None and overall_newest is not None:
             await self._store.update_sync_state(
                 "entries",
                 last_modified=entries_lm,

@@ -110,18 +110,16 @@ class HistoryStore:
         ]
         if not rows:
             return 0
-        async with self._db.execute("SELECT COUNT(*) AS n FROM entries") as cur:
-            before = (await cur.fetchone())["n"]
-        await self._db.executemany(
+        cur = await self._db.executemany(
             "INSERT OR IGNORE INTO entries "
             "(identifier, date, sgv, direction, type, noise, srv_modified) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             rows,
         )
         await self._db.commit()
-        async with self._db.execute("SELECT COUNT(*) AS n FROM entries") as cur:
-            after = (await cur.fetchone())["n"]
-        return int(after - before)
+        # SQLite's rowcount on INSERT OR IGNORE reports only rows actually
+        # inserted (i.e. not ignored on PK conflict). No O(N) COUNT scans.
+        return cur.rowcount or 0
 
     async def entries_in_window(
         self, days: int, *, now_ms: int | None = None
