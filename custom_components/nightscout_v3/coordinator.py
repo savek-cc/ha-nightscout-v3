@@ -487,15 +487,22 @@ def _parse_last_bolus(raw: Any) -> datetime | None:
         return None
     s = str(raw).strip()
     now = dt_util.now()
-    for fmt in ("%d.%m.%y %H:%M", "%d.%m. %H:%M"):
-        try:
-            parsed = datetime.strptime(s, fmt)
-        except ValueError:
-            continue
-        if fmt == "%d.%m. %H:%M":
-            parsed = parsed.replace(year=now.year)
+
+    try:
+        parsed = datetime.strptime(s, "%d.%m.%y %H:%M")
+    except ValueError:
+        pass
+    else:
         return parsed.replace(tzinfo=now.tzinfo)
-    return None
+
+    # Attach an explicit year before parsing to avoid Python 3.15's
+    # deprecation of day/month parsing without a year, and to handle
+    # leap-day inputs correctly when the current year is a leap year.
+    try:
+        parsed = datetime.strptime(f"{s} {now.year}", "%d.%m. %H:%M %Y")
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=now.tzinfo)
 
 
 def _loop_block(ds: dict[str, Any], now: datetime) -> dict[str, Any]:

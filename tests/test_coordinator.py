@@ -242,9 +242,11 @@ def test_parse_created_handles_bad_inputs() -> None:
     assert good is not None and good.year == 2026
 
 
-def test_parse_last_bolus_handles_aaps_formats() -> None:
+def test_parse_last_bolus_handles_aaps_formats(freezer) -> None:
     """AAPS emits DD.MM.YY or DD.MM. timestamps — parse both, reject junk."""
     from custom_components.nightscout_v3.coordinator import _parse_last_bolus
+
+    freezer.move_to("2026-04-23T08:30:00Z")
 
     assert _parse_last_bolus(None) is None
     assert _parse_last_bolus("") is None
@@ -254,7 +256,10 @@ def test_parse_last_bolus_handles_aaps_formats() -> None:
     assert dt is not None and dt.year == 2026 and dt.day == 23 and dt.month == 4
     # DD.MM. (no year) variant — year filled in from "now"
     dt = _parse_last_bolus("15.06. 12:30")
-    assert dt is not None and dt.day == 15 and dt.month == 6
+    assert dt is not None and dt.year == 2026 and dt.day == 15 and dt.month == 6
+    freezer.move_to("2024-02-29T08:30:00Z")
+    dt = _parse_last_bolus("29.02. 12:30")
+    assert dt is not None and dt.year == 2024 and dt.day == 29 and dt.month == 2
     # Unparseable strings return None instead of raising
     assert _parse_last_bolus("gibberish") is None
 
