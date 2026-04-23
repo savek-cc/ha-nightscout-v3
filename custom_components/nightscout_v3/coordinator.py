@@ -312,7 +312,7 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         carbs_today = _carbs_since_local_midnight(self._recent_treatments, self.hass)
 
         bg = _bg_block(entries, now)
-        pump = _pump_block(ds)
+        pump = _pump_block(ds, self._recent_treatments, now)
         loop = _loop_block(ds, now)
         uploader = _uploader_block(ds, now)
         care = _care_block(self._treatment_age_cache, now, self._last_meal, carbs_today, self._last_note)
@@ -383,7 +383,11 @@ def _bg_block(entries: list[dict[str, Any]], now: datetime) -> dict[str, Any]:
     }
 
 
-def _pump_block(ds: dict[str, Any]) -> dict[str, Any]:
+def _pump_block(
+    ds: dict[str, Any],
+    recent_treatments: list[dict[str, Any]],
+    now: datetime,
+) -> dict[str, Any]:
     pump = ds.get("pump") or {}
     extended = pump.get("extended") or {}
     battery = (pump.get("battery") or {}).get("percent")
@@ -394,7 +398,7 @@ def _pump_block(ds: dict[str, Any]) -> dict[str, Any]:
         "battery_percent": battery,
         "status_text": status_text,
         "base_basal": extended.get("BaseBasalRate"),
-        "temp_basal_rate": _temp_basal_rate(ds),
+        "temp_basal_rate": _temp_basal_rate(ds, recent_treatments, now),
         "temp_basal_remaining": extended.get("TempBasalRemaining"),
         "active_profile": extended.get("ActiveProfile"),
         "last_bolus_time": last_bolus_time,
@@ -402,15 +406,37 @@ def _pump_block(ds: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _temp_basal_rate(ds: dict[str, Any]) -> float | None:
-    """Return the currently-running temp basal rate in U/h, or None if none.
+def _temp_basal_rate(
+    ds: dict[str, Any],
+    recent_treatments: list[dict[str, Any]],
+    now: datetime,
+) -> float | None:
+    """Return the currently-running temp basal rate in U/h, or None.
 
-    AAPS reports this redundantly in two places:
-      - `pump.extended.TempBasalAbsoluteRate` — the authoritative value
-      - `openaps.enacted.rate` — can be `-1` meaning "no enacted override"
-        (AAPS sentinel, *not* a real negative rate). Filter the sentinel
-        when falling back.
+    AAPS does not reliably put the rate in the devicestatus document
+    (observed: 10 successive snapshots during an active temp basal, all
+    with `TempBasalAbsoluteRate=None` and `openaps.enacted=None`). The
+    authoritative source is the latest `eventType=Temp Basal` treatment
+    — it has `rate` (U/h) and `duration` (min). Filter out treatments
+    whose window has already elapsed.
+
+    Fall back to devicestatus fields only if no active treatment is
+    found — useful on servers that *do* populate them.
     """
+    for t in recent_treatments:
+        if t.get("eventType") != "Temp Basal":
+            continue
+        created = _parse_created(t)
+        if created is None:
+            continue
+        duration_min = t.get("duration")
+        if duration_min is None:
+            continue
+        end = created + timedelta(minutes=float(duration_min))
+        if end < now:
+            continue
+        rate = t.get("rate")
+        return float(rate) if rate is not None else None
     ext = (ds.get("pump") or {}).get("extended") or {}
     if (rate := ext.get("TempBasalAbsoluteRate")) is not None:
         return float(rate)

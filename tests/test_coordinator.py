@@ -184,6 +184,46 @@ async def test_incremental_entries_extends_window(
     assert state.newest_date == 250
 
 
+def test_parse_last_bolus_handles_aaps_formats() -> None:
+    """AAPS emits DD.MM.YY or DD.MM. timestamps — parse both, reject junk."""
+    from custom_components.nightscout_v3.coordinator import _parse_last_bolus
+    assert _parse_last_bolus(None) is None
+    assert _parse_last_bolus("") is None
+    assert _parse_last_bolus("null") is None
+    # DD.MM.YY variant
+    dt = _parse_last_bolus("23.04.26 07:36")
+    assert dt is not None and dt.year == 2026 and dt.day == 23 and dt.month == 4
+    # DD.MM. (no year) variant — year filled in from "now"
+    dt = _parse_last_bolus("15.06. 12:30")
+    assert dt is not None and dt.day == 15 and dt.month == 6
+    # Unparseable strings return None instead of raising
+    assert _parse_last_bolus("gibberish") is None
+
+
+def test_temp_basal_rate_reads_latest_active_treatment() -> None:
+    """Temp Basal rate must come from an unexpired Temp Basal treatment."""
+    from datetime import datetime, timedelta, timezone
+    from custom_components.nightscout_v3.coordinator import _temp_basal_rate
+    now = datetime(2026, 4, 23, 8, 30, tzinfo=timezone.utc)
+
+    # Active now: started 10 min ago, duration 30 min → still running
+    active = {"eventType": "Temp Basal", "created_at": (now - timedelta(minutes=10)).isoformat(),
+              "duration": 30, "rate": 0.8}
+    # Elapsed: 90 min ago, duration 60 min → gone
+    elapsed = {"eventType": "Temp Basal", "created_at": (now - timedelta(minutes=90)).isoformat(),
+               "duration": 60, "rate": 1.2}
+
+    # Latest (active) wins over older docs
+    assert _temp_basal_rate({}, [active, elapsed], now) == 0.8
+    # No active treatment → fall back to devicestatus.TempBasalAbsoluteRate
+    ds = {"pump": {"extended": {"TempBasalAbsoluteRate": 0.5}}}
+    assert _temp_basal_rate(ds, [elapsed], now) == 0.5
+    # No source at all → None
+    assert _temp_basal_rate({}, [elapsed], now) is None
+    # openaps sentinel rate=-1 must be filtered
+    assert _temp_basal_rate({"openaps": {"enacted": {"rate": -1}}}, [], now) is None
+
+
 def test_carbs_since_local_midnight_filters_correctly(hass: HomeAssistant) -> None:
     """Only treatments with created_at >= today's local midnight should count."""
     from custom_components.nightscout_v3.coordinator import _carbs_since_local_midnight
