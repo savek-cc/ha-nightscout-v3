@@ -25,7 +25,7 @@ from homeassistant.helpers.selector import (
 )
 
 from .api.auth import JwtManager
-from .api.capabilities import probe_capabilities
+from .api.capabilities import ServerCapabilities, probe_capabilities
 from .api.client import NightscoutV3Client
 from .api.exceptions import ApiError, AuthError
 from .const import (
@@ -250,8 +250,6 @@ class NightscoutOptionsFlow(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the features step."""
-        from .api.capabilities import ServerCapabilities
-
         caps = ServerCapabilities.from_dict(self.config_entry.data[CONF_CAPABILITIES])
         features = features_for_capabilities(caps)
         current = dict(self.config_entry.options.get(OPT_ENABLED_FEATURES, {}))

@@ -107,10 +107,11 @@ rules:
   docs-supported-devices:
     status: done
     comment: >
-      README states Nightscout >= 15.0.0 servers are supported; AAPS and
-      Loop uploaders are the primary tested sources. Individual CGM
-      hardware is out of scope for this integration (hardware support
-      lives with the Nightscout server + uploader combination).
+      README "Tested upstream stacks" table enumerates the upstream
+      Nightscout + uploader combinations exercised against this
+      integration (AAPS, Loop/iAPS, xDrip+, Care Portal only) with
+      version ranges. Individual CGM hardware is out of scope; this
+      integration connects to a Nightscout server, not to CGMs.
   docs-use-cases:
     status: done
     comment: See README "Use cases" section.

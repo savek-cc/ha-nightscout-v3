@@ -26,6 +26,22 @@ instances used by Type 1 diabetics.
 - An access token with at least `*:*:read`. Write scopes
   (`api:treatments:create` etc.) are not needed — v0.1.0 is read-only.
 
+### Tested upstream stacks
+
+Home Assistant does not connect to CGM hardware directly — it connects to a
+Nightscout server that your uploader populates. The combinations routinely
+exercised against this integration are:
+
+| Uploader / loop stack | Nightscout version | Notes |
+| --- | --- | --- |
+| **AAPS** (Android APS) ≥ 3.2 | 15.0.x / 15.1.x | Primary development target; exercises pump + OpenAPS + careportal paths. |
+| **Loop / iAPS** (iOS) ≥ 3.4 | 15.0.x | `devicestatus.loop` variants; predictions + eventual BG. |
+| **xDrip+** ≥ 2024-12 | 15.0.x | Entries + uploader-battery only; no pump/loop features. |
+| **Nightscout Care Portal** only | 15.0.x | Treatments + age sensors; degrades gracefully when pump/loop are absent. |
+
+Older Nightscout servers (≤ 14.x) do not expose `/api/v3` and will surface a
+persistent repair issue asking you to upgrade.
+
 ## Installation via HACS
 
 1. In HACS, **Integrations → ⋯ → Custom repositories**.

@@ -143,7 +143,10 @@ class NightscoutCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if self._stats_dirty or self._tick % stats_every == 0 or self._tick == 1:
                 await self._stats_cycle()
         except AuthError as exc:
-            raise ConfigEntryAuthFailed(str(exc)) from exc
+            raise ConfigEntryAuthFailed(
+                translation_domain=DOMAIN,
+                translation_key="auth_failed",
+            ) from exc
         except ApiError as exc:
             raise UpdateFailed(str(exc)) from exc
         except (TimeoutError, OSError) as exc:

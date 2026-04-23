@@ -70,45 +70,6 @@
       "loop_target_bg": {
         "default": "mdi:target"
       },
-      "mdi:alert-circle": {
-        "default": "mdi:alert-circle"
-      },
-      "mdi:alert-decagram": {
-        "default": "mdi:alert-decagram"
-      },
-      "mdi:arrow-down-bold": {
-        "default": "mdi:arrow-down-bold"
-      },
-      "mdi:arrow-down-thin-circle-outline": {
-        "default": "mdi:arrow-down-thin-circle-outline"
-      },
-      "mdi:arrow-up-bold": {
-        "default": "mdi:arrow-up-bold"
-      },
-      "mdi:arrow-up-thin-circle-outline": {
-        "default": "mdi:arrow-up-thin-circle-outline"
-      },
-      "mdi:chart-areaspline": {
-        "default": "mdi:chart-areaspline"
-      },
-      "mdi:chart-bell-curve": {
-        "default": "mdi:chart-bell-curve"
-      },
-      "mdi:chart-line": {
-        "default": "mdi:chart-line"
-      },
-      "mdi:diabetes": {
-        "default": "mdi:diabetes"
-      },
-      "mdi:sigma": {
-        "default": "mdi:sigma"
-      },
-      "mdi:timer-check": {
-        "default": "mdi:timer-check"
-      },
-      "mdi:variable": {
-        "default": "mdi:variable"
-      },
       "pump_active_profile": {
         "default": "mdi:account-cog"
       },
@@ -136,8 +97,61 @@
       "pump_temp_basal_remaining": {
         "default": "mdi:timer-sand"
       },
+      "stat_agp": {
+        "default": "mdi:chart-bell-curve-cumulative"
+      },
+      "stat_cv": {
+        "default": "mdi:variable"
+      },
+      "stat_gmi": {
+        "default": "mdi:sigma"
+      },
+      "stat_hba1c": {
+        "default": "mdi:diabetes"
+      },
+      "stat_hbgi": {
+        "default": "mdi:alert-decagram"
+      },
+      "stat_hourly_profile": {
+        "default": "mdi:chart-areaspline"
+      },
+      "stat_lbgi": {
+        "default": "mdi:alert-circle"
+      },
+      "stat_mean": {
+        "default": "mdi:chart-line"
+      },
+      "stat_sd": {
+        "default": "mdi:chart-bell-curve"
+      },
+      "stat_tir_high": {
+        "default": "mdi:arrow-up-thin-circle-outline"
+      },
+      "stat_tir_in_range": {
+        "default": "mdi:target"
+      },
+      "stat_tir_low": {
+        "default": "mdi:arrow-down-thin-circle-outline"
+      },
+      "stat_tir_very_high": {
+        "default": "mdi:arrow-up-bold"
+      },
+      "stat_tir_very_low": {
+        "default": "mdi:arrow-down-bold"
+      },
       "uploader_battery": {
         "default": "mdi:cellphone"
+      }
+    },
+    "binary_sensor": {
+      "loop_active": {
+        "default": "mdi:refresh-auto"
+      },
+      "uploader_charging": {
+        "default": "mdi:battery-charging"
+      },
+      "uploader_online": {
+        "default": "mdi:cloud-check"
       }
     }
   }
