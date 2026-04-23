@@ -185,6 +185,91 @@ reports the correctness symptom (sort direction ignored on
 `/api/v3/treatments?eventType$eq=…&sort$desc=created_at`) that the
 missing compound index likely causes.
 
+### Transparent Hugepages (Mongo 8.x on small-RAM hosts)
+
+MongoDB 8.x ships a new allocator (`tcmalloc-google`) that requires
+Transparent Hugepages (THP) to be enabled on the **host kernel**. On
+Debian / Fedora / many VPS images THP defaults to `madvise` or `never`,
+which makes `tcmalloc-google` fragment under bulk-insert load and
+either OOM-spiral or segfault outright (observed as a cascade of
+"Mongo is down → Nightscout returns 500 → HA config flow gives up"
+during this integration's initial backfill).
+
+Docker doesn't help here: containers share the host kernel, so the
+Mongo process inside the container reads the host's `/sys/kernel/mm/`
+regardless of the image. The fix has to land on the host VM.
+
+On a systemd host (most modern Linux, Synology DSM excluded), drop in
+these two files once and they persist across reboots:
+
+```ini
+# /etc/systemd/system/mongo-thp.service
+[Unit]
+Description=Set THP for MongoDB tcmalloc-google allocator
+After=sysinit.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'echo always > /sys/kernel/mm/transparent_hugepage/enabled; echo defer+madvise > /sys/kernel/mm/transparent_hugepage/defrag; echo 0 > /sys/kernel/mm/transparent_hugepage/khugepaged/max_ptes_none'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```ini
+# /etc/sysctl.d/99-mongo-thp.conf
+vm.swappiness = 1
+```
+
+Enable and apply:
+
+```bash
+systemctl daemon-reload
+systemctl enable --now mongo-thp.service
+sysctl -p /etc/sysctl.d/99-mongo-thp.conf
+docker restart <your-mongo-container>
+```
+
+Why four separate things:
+
+- `transparent_hugepage/enabled = always` — provide hugepages to any
+  process, not just those that explicitly `madvise()` for them.
+- `transparent_hugepage/defrag = defer+madvise` — satisfy THP requests
+  without blocking page faults; compaction happens in background.
+- `khugepaged/max_ptes_none = 0` — let khugepaged collapse 4K pages
+  into 2M hugepages aggressively, so the allocator doesn't stay in
+  4K-land after large alloc/free churn.
+- `vm.swappiness = 1` — never preempt RSS to swap unless we actually
+  run out of RAM; for in-memory databases the swap-back-in latency
+  dominates.
+
+`/sys/kernel/mm/transparent_hugepage/*` is **not** sysctl-controllable,
+so the `echo` via a oneshot systemd service is the only persistent
+path. `vm.swappiness` IS sysctl, so it goes through
+`/etc/sysctl.d/*.conf` where systemd-sysctl picks it up at boot.
+
+Then tighten the Mongo budget to its real working set — on a 90-day
+Nightscout with the compound indexes above, 256 MB cache is plenty:
+
+```yaml
+# docker-compose.yml (Nightscout stack)
+mongo:
+  image: mongo:8.2
+  command:
+    - --wiredTigerCacheSizeGB=0.25
+    - --setParameter=diagnosticDataCollectionEnabled=false
+    - --profile=0
+  volumes:
+    - ./mongodb:/data/db
+```
+
+With THP correct, Mongo's total RSS stays around 300-500 MB under
+steady-state HA polling load (observed on a 574k-treatments /
+961k-entries / 1.9M-devicestatus instance). Without THP, the RSS
+grows unbounded with request volume regardless of
+`wiredTigerCacheSizeGB`.
+
 ## Troubleshooting
 
 - **JWT refresh loop in logs** — your token was rotated; use the reauth
@@ -198,6 +283,9 @@ missing compound index likely causes.
 - **Config flow "Connecting…" hangs 30+ seconds / server memory spikes on
   Add Integration** — missing compound indexes on `treatments`, `entries`,
   and `devicestatus`; see **Server-side tuning** above.
+- **Mongo container cycles OOM / segfaults during bulk writes** — host
+  kernel has THP disabled while Mongo 8.x uses `tcmalloc-google`; see
+  **Transparent Hugepages** under **Server-side tuning**.
 
 ## Links
 
