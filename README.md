@@ -187,16 +187,30 @@ missing compound index likely causes.
 
 ### Transparent Hugepages (Mongo 8.x on small-RAM hosts)
 
-MongoDB 8.x ships a new allocator (`tcmalloc-google`) that requires
-Transparent Hugepages (THP) to be enabled on the **host kernel**. On
-Debian / Fedora / many VPS images THP defaults to `madvise` or `never`,
-which makes `tcmalloc-google` fragment under bulk-insert load and
-either OOM-spiral or segfault outright (observed as a cascade of
-"Mongo is down → Nightscout returns 500 → HA config flow gives up"
-during this integration's initial backfill).
+**The MongoDB THP recommendation flipped in 8.0.** For 4.x–7.x the
+official tutorial was "disable THP" (`enabled=never`,
+`defrag=never`). 8.0 shipped a new allocator — `tcmalloc-google`, with
+per-CPU caches instead of per-thread — that is much more efficient
+when THP is **enabled**, and *fragments memory aggressively* when
+it's disabled. On small-RAM hosts with the old advice still in place
+(Debian / Fedora / many VPS images default to `never` or `madvise`),
+this shows up as a cascade of "Mongo spirals on RSS → Nightscout
+returns 500 → HA config flow gives up" during the initial backfill.
 
-Docker doesn't help here: containers share the host kernel, so the
-Mongo process inside the container reads the host's `/sys/kernel/mm/`
+Primary sources from MongoDB:
+
+- [Disable THP tutorial (current manual, with the 8.0 carve-out)](https://www.mongodb.com/docs/manual/tutorial/disable-transparent-huge-pages/):
+  *"Starting in MongoDB 8.0, MongoDB uses an upgraded version of
+  TCMalloc that improves performance with Transparent Hugepages
+  enabled. If you are using MongoDB 8.0 or later, see Enable
+  Transparent Hugepages (THP)."*
+- [TCMalloc Performance Optimization](https://www.mongodb.com/docs/manual/administration/tcmalloc-performance/)
+  — the 8.0 tuning page with the exact sysfs values reproduced below.
+- [startup_warnings_mongod.cpp](https://github.com/mongodb/mongo/blob/master/src/mongo/db/startup_warnings_mongod.cpp)
+  — source of the `9068900` / `8640302` / `8386700` startup warnings.
+
+Docker doesn't help: containers share the host kernel, so the Mongo
+process inside the container reads the host's `/sys/kernel/mm/`
 regardless of the image. The fix has to land on the host VM.
 
 On a systemd host (most modern Linux, Synology DSM excluded), drop in
@@ -220,6 +234,7 @@ WantedBy=multi-user.target
 ```ini
 # /etc/sysctl.d/99-mongo-thp.conf
 vm.swappiness = 1
+vm.overcommit_memory = 1
 ```
 
 Enable and apply:
@@ -243,6 +258,11 @@ Why four separate things:
 - `vm.swappiness = 1` — never preempt RSS to swap unless we actually
   run out of RAM; for in-memory databases the swap-back-in latency
   dominates.
+- `vm.overcommit_memory = 1` — let tcmalloc-google reserve large
+  virtual-address regions up front (the allocator is designed around
+  this); with the default `0`, requests that exceed
+  heuristic-available RAM fail even though THP would satisfy them from
+  unused pages.
 
 `/sys/kernel/mm/transparent_hugepage/*` is **not** sysctl-controllable,
 so the `echo` via a oneshot systemd service is the only persistent
