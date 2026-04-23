@@ -7,10 +7,9 @@ rules:
   brands:
     status: exempt
     comment: >
-      Custom component distributed exclusively via HACS. The
-      home-assistant/brands repository is for integrations shipped in
-      Home Assistant core; a HACS integration publishes its brand
-      assets through the HACS repository itself.
+      Custom component distributed exclusively via HACS. Brand assets
+      for a future PR to home-assistant/brands are staged in
+      `brands/custom_integrations/nightscout_v3/`.
   common-modules: done
   config-flow-test-coverage: done
   config-flow: done
@@ -55,3 +54,56 @@ rules:
   parallel-updates: done
   reauthentication-flow: done
   test-coverage: done
+  # Gold
+  devices:
+    status: done
+    comment: >
+      Every entity belongs to a device representing the Nightscout server
+      (see `NightscoutEntity._attr_device_info`).
+  discovery:
+    status: exempt
+    comment: Nightscout servers do not advertise via mDNS/SSDP; URL is supplied manually.
+  discovery-update-info:
+    status: exempt
+    comment: No discovery protocol applies; see `discovery`.
+  docs-data-update:
+    status: done
+    comment: >
+      README "Options flow" describes the fast / change-detect / stats polling
+      cycles and their configurable intervals.
+  docs-supported-functions:
+    status: done
+    comment: See README "What it does" and "Features overview" table.
+  docs-troubleshooting:
+    status: done
+    comment: See README "Troubleshooting" section.
+  dynamic-devices:
+    status: exempt
+    comment: >
+      One Nightscout server = one logical device; new capabilities are
+      surfaced as entities of the existing device via the
+      "Rediscover capabilities" options step.
+  entity-device-class:
+    status: done
+    comment: >
+      Appropriate SensorDeviceClass / BinarySensorDeviceClass applied where
+      semantically meaningful (battery, timestamp, connectivity, running,
+      battery_charging). Value sensors without a fitting class stay unset.
+  entity-translations:
+    status: done
+    comment: >
+      Every entity uses `_attr_has_entity_name = True` and
+      `_attr_translation_key` driven by `FeatureDef.translation_key`;
+      translations shipped in strings.json and translations/*.json.
+  # Remaining Gold rules tracked for completion:
+  # docs-examples — awaiting verification that dashboards/examples/ carries actionable snippets
+  # docs-known-limitations — README section pending
+  # docs-supported-devices — README section pending (AAPS/Dexcom/Trio/etc.)
+  # docs-use-cases — README section pending
+  # entity-category — FeatureDef.entity_category field pending
+  # entity-disabled-by-default — propagate FeatureDef.default_enabled to entity_registry_enabled_default
+  # exception-translations — strings.json `exceptions` block + HomeAssistantError translation_domain/key
+  # icon-translations — icons.json + drop `_attr_icon = feature.icon`
+  # reconfiguration-flow — async_step_reconfigure in NightscoutConfigFlow
+  # repair-issues — ir.async_create_issue on unrecoverable probe failures
+  # stale-devices — async_remove_config_entry_device or justified exempt

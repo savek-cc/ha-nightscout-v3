@@ -8,7 +8,7 @@
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/savek-cc/ha-nightscout-v3/issues",
-  "quality_scale": "silver",
+  "loggers": ["custom_components.nightscout_v3"],
   "requirements": ["aiosqlite==0.20.0"],
   "version": "0.1.0"
 }
