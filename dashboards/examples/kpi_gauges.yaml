@@ -11,7 +11,7 @@ columns: 3
 square: false
 cards:
   - type: gauge
-    entity: sensor.nightscout_v3_gmi_90d
+    entity: sensor.nightscout_v3_stat_gmi_90d
     name: GMI (90 d)
     unit: "%"
     min: 5
@@ -23,7 +23,7 @@ cards:
       - { from: 7.5, color: "#c0392b" }
 
   - type: gauge
-    entity: sensor.nightscout_v3_tir_im_zielbereich_90d
+    entity: sensor.nightscout_v3_stat_tir_in_range_90d
     name: TIR 70–180 (90 d)
     unit: "%"
     min: 0
@@ -35,7 +35,7 @@ cards:
       - { from: 70, color: "#35b94a" }
 
   - type: gauge
-    entity: sensor.nightscout_v3_cv_90d
+    entity: sensor.nightscout_v3_stat_cv_90d
     name: CV (90 d)
     unit: "%"
     min: 0

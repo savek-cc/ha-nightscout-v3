@@ -36,7 +36,7 @@ views:
         Zeitraum 90 Tage · AGP 14 Tage ·
         Ziel 70–180 mg/dL · Hypo < 70 · schwer < 54
     - type: tile
-      entity: sensor.nightscout_v3_bg_aktuell
+      entity: sensor.nightscout_v3_bg_current
       name: Aktueller Blutzucker
       icon: mdi:water
       vertical: false
@@ -85,15 +85,15 @@ views:
                   formatter: |
                     EVAL:function(w) { return Math.round(w.globals.seriesTotals[2]) + '%' }
       series:
-      - entity: sensor.nightscout_v3_tir_sehr_niedrig_90d
+      - entity: sensor.nightscout_v3_stat_tir_very_low_90d
         name: <54
-      - entity: sensor.nightscout_v3_tir_niedrig_90d
+      - entity: sensor.nightscout_v3_stat_tir_low_90d
         name: 54–69
-      - entity: sensor.nightscout_v3_tir_im_zielbereich_90d
+      - entity: sensor.nightscout_v3_stat_tir_in_range_90d
         name: 70–180 (Ziel)
-      - entity: sensor.nightscout_v3_tir_hoch_90d
+      - entity: sensor.nightscout_v3_stat_tir_high_90d
         name: 181–250
-      - entity: sensor.nightscout_v3_tir_sehr_hoch_90d
+      - entity: sensor.nightscout_v3_stat_tir_very_high_90d
         name: '>250'
     - type: markdown
       content: |
@@ -101,9 +101,9 @@ views:
 
         | Fenster | &lt;54 | 54–69 | **70–180** | 181–250 | &gt;250 |
         |---|---:|---:|---:|---:|---:|
-        | 14 d | {{ states('sensor.nightscout_v3_tir_sehr_niedrig_14d') }} % | {{ states('sensor.nightscout_v3_tir_niedrig_14d') }} % | **{{ states('sensor.nightscout_v3_tir_im_zielbereich_14d') }} %** | {{ states('sensor.nightscout_v3_tir_hoch_14d') }} % | {{ states('sensor.nightscout_v3_tir_sehr_hoch_14d') }} % |
-        | 30 d | {{ states('sensor.nightscout_v3_tir_sehr_niedrig_30d') }} % | {{ states('sensor.nightscout_v3_tir_niedrig_30d') }} % | **{{ states('sensor.nightscout_v3_tir_im_zielbereich_30d') }} %** | {{ states('sensor.nightscout_v3_tir_hoch_30d') }} % | {{ states('sensor.nightscout_v3_tir_sehr_hoch_30d') }} % |
-        | 90 d | {{ states('sensor.nightscout_v3_tir_sehr_niedrig_90d') }} % | {{ states('sensor.nightscout_v3_tir_niedrig_90d') }} % | **{{ states('sensor.nightscout_v3_tir_im_zielbereich_90d') }} %** | {{ states('sensor.nightscout_v3_tir_hoch_90d') }} % | {{ states('sensor.nightscout_v3_tir_sehr_hoch_90d') }} % |
+        | 14 d | {{ states('sensor.nightscout_v3_stat_tir_very_low_14d') }} % | {{ states('sensor.nightscout_v3_stat_tir_low_14d') }} % | **{{ states('sensor.nightscout_v3_stat_tir_in_range_14d') }} %** | {{ states('sensor.nightscout_v3_stat_tir_high_14d') }} % | {{ states('sensor.nightscout_v3_stat_tir_very_high_14d') }} % |
+        | 30 d | {{ states('sensor.nightscout_v3_stat_tir_very_low_30d') }} % | {{ states('sensor.nightscout_v3_stat_tir_low_30d') }} % | **{{ states('sensor.nightscout_v3_stat_tir_in_range_30d') }} %** | {{ states('sensor.nightscout_v3_stat_tir_high_30d') }} % | {{ states('sensor.nightscout_v3_stat_tir_very_high_30d') }} % |
+        | 90 d | {{ states('sensor.nightscout_v3_stat_tir_very_low_90d') }} % | {{ states('sensor.nightscout_v3_stat_tir_low_90d') }} % | **{{ states('sensor.nightscout_v3_stat_tir_in_range_90d') }} %** | {{ states('sensor.nightscout_v3_stat_tir_high_90d') }} % | {{ states('sensor.nightscout_v3_stat_tir_very_high_90d') }} % |
   - type: grid
     cards:
     - type: heading
@@ -114,7 +114,7 @@ views:
       square: false
       cards:
       - type: gauge
-        entity: sensor.nightscout_v3_gmi_90d
+        entity: sensor.nightscout_v3_stat_gmi_90d
         name: GMI
         unit: '%'
         min: 5
@@ -128,7 +128,7 @@ views:
         - from: 7.5
           color: '#c0392b'
       - type: gauge
-        entity: sensor.nightscout_v3_tir_im_zielbereich_90d
+        entity: sensor.nightscout_v3_stat_tir_in_range_90d
         name: TIR 70–180
         unit: '%'
         min: 0
@@ -142,7 +142,7 @@ views:
         - from: 70
           color: '#35b94a'
       - type: gauge
-        entity: sensor.nightscout_v3_cv_90d
+        entity: sensor.nightscout_v3_stat_cv_90d
         name: CV
         unit: '%'
         min: 0
@@ -160,11 +160,11 @@ views:
       show_state: true
       columns: 3
       entities:
-      - entity: sensor.nightscout_v3_mittlere_bg_90d
+      - entity: sensor.nightscout_v3_stat_mean_90d
         name: Mean
-      - entity: sensor.nightscout_v3_sd_90d
+      - entity: sensor.nightscout_v3_stat_sd_90d
         name: SD
-      - entity: sensor.nightscout_v3_hba1c_90d
+      - entity: sensor.nightscout_v3_stat_hba1c_90d
         name: eHbA1c
     - type: heading
       heading: Risikoindizes (90 d)
@@ -174,7 +174,7 @@ views:
       square: false
       cards:
       - type: gauge
-        entity: sensor.nightscout_v3_lbgi_90d
+        entity: sensor.nightscout_v3_stat_lbgi_90d
         name: LBGI (Hypo-Risiko)
         min: 0
         max: 10
@@ -187,7 +187,7 @@ views:
         - from: 5
           color: '#c0392b'
       - type: gauge
-        entity: sensor.nightscout_v3_hbgi_90d
+        entity: sensor.nightscout_v3_stat_hbgi_90d
         name: HBGI (Hyper-Risiko)
         min: 0
         max: 20
@@ -257,35 +257,35 @@ views:
             borderColor: '#7e1e1e'
             strokeDashArray: 4
       series:
-      - entity: sensor.nightscout_v3_agp_perzentile_14d
+      - entity: sensor.nightscout_v3_stat_agp_14d
         name: p5
         data_generator: |
           const arr = entity.attributes.p5_by_hour || [];
           const d = new Date(); d.setUTCHours(0,0,0,0);
           const base = d.getTime();
           return arr.map((v, i) => [base + i * 3600000, v]);
-      - entity: sensor.nightscout_v3_agp_perzentile_14d
+      - entity: sensor.nightscout_v3_stat_agp_14d
         name: p25
         data_generator: |
           const arr = entity.attributes.p25_by_hour || [];
           const d = new Date(); d.setUTCHours(0,0,0,0);
           const base = d.getTime();
           return arr.map((v, i) => [base + i * 3600000, v]);
-      - entity: sensor.nightscout_v3_agp_perzentile_14d
+      - entity: sensor.nightscout_v3_stat_agp_14d
         name: Median
         data_generator: |
           const arr = entity.attributes.p50_by_hour || [];
           const d = new Date(); d.setUTCHours(0,0,0,0);
           const base = d.getTime();
           return arr.map((v, i) => [base + i * 3600000, v]);
-      - entity: sensor.nightscout_v3_agp_perzentile_14d
+      - entity: sensor.nightscout_v3_stat_agp_14d
         name: p75
         data_generator: |
           const arr = entity.attributes.p75_by_hour || [];
           const d = new Date(); d.setUTCHours(0,0,0,0);
           const base = d.getTime();
           return arr.map((v, i) => [base + i * 3600000, v]);
-      - entity: sensor.nightscout_v3_agp_perzentile_14d
+      - entity: sensor.nightscout_v3_stat_agp_14d
         name: p95
         data_generator: |
           const arr = entity.attributes.p95_by_hour || [];
@@ -303,41 +303,41 @@ views:
     - type: entities
       title: 14 Tage
       entities:
-      - entity: sensor.nightscout_v3_gmi_14d
+      - entity: sensor.nightscout_v3_stat_gmi_14d
         name: GMI
-      - entity: sensor.nightscout_v3_tir_im_zielbereich_14d
+      - entity: sensor.nightscout_v3_stat_tir_in_range_14d
         name: TIR 70–180
-      - entity: sensor.nightscout_v3_cv_14d
+      - entity: sensor.nightscout_v3_stat_cv_14d
         name: CV
-      - entity: sensor.nightscout_v3_mittlere_bg_14d
+      - entity: sensor.nightscout_v3_stat_mean_14d
         name: Mean
-      - entity: sensor.nightscout_v3_sd_14d
+      - entity: sensor.nightscout_v3_stat_sd_14d
         name: SD
     - type: entities
       title: 30 Tage
       entities:
-      - entity: sensor.nightscout_v3_gmi_30d
+      - entity: sensor.nightscout_v3_stat_gmi_30d
         name: GMI
-      - entity: sensor.nightscout_v3_tir_im_zielbereich_30d
+      - entity: sensor.nightscout_v3_stat_tir_in_range_30d
         name: TIR 70–180
-      - entity: sensor.nightscout_v3_cv_30d
+      - entity: sensor.nightscout_v3_stat_cv_30d
         name: CV
-      - entity: sensor.nightscout_v3_mittlere_bg_30d
+      - entity: sensor.nightscout_v3_stat_mean_30d
         name: Mean
-      - entity: sensor.nightscout_v3_sd_30d
+      - entity: sensor.nightscout_v3_stat_sd_30d
         name: SD
     - type: entities
       title: 90 Tage
       entities:
-      - entity: sensor.nightscout_v3_gmi_90d
+      - entity: sensor.nightscout_v3_stat_gmi_90d
         name: GMI
-      - entity: sensor.nightscout_v3_tir_im_zielbereich_90d
+      - entity: sensor.nightscout_v3_stat_tir_in_range_90d
         name: TIR 70–180
-      - entity: sensor.nightscout_v3_cv_90d
+      - entity: sensor.nightscout_v3_stat_cv_90d
         name: CV
-      - entity: sensor.nightscout_v3_mittlere_bg_90d
+      - entity: sensor.nightscout_v3_stat_mean_90d
         name: Mean
-      - entity: sensor.nightscout_v3_sd_90d
+      - entity: sensor.nightscout_v3_stat_sd_90d
         name: SD
   - type: grid
     cards:
@@ -346,23 +346,23 @@ views:
       heading_style: title
     - type: entities
       entities:
-      - entity: binary_sensor.nightscout_v3_loop_aktiv
+      - entity: binary_sensor.nightscout_v3_loop_active
         name: Loop aktiv
-      - entity: sensor.nightscout_v3_loop_modus
+      - entity: sensor.nightscout_v3_loop_mode
         name: Loop-Modus
       - entity: sensor.nightscout_v3_loop_iob
         name: IOB
       - entity: sensor.nightscout_v3_loop_cob
         name: COB
-      - entity: sensor.nightscout_v3_loop_prognose_bg
+      - entity: sensor.nightscout_v3_loop_eventual_bg
         name: Prognose
-      - entity: sensor.nightscout_v3_loop_zielwert
+      - entity: sensor.nightscout_v3_loop_target_bg
         name: Zielwert
-      - entity: sensor.nightscout_v3_loop_sensitivitat
+      - entity: sensor.nightscout_v3_loop_sensitivity_ratio
         name: Sensitivität
-      - entity: sensor.nightscout_v3_loop_letzte_aktion_min
+      - entity: sensor.nightscout_v3_loop_last_enacted_age_minutes
         name: Letzte Loop-Aktion (min)
-      - entity: sensor.nightscout_v3_pumpen_status
+      - entity: sensor.nightscout_v3_pump_status
         name: Pumpenstatus
   - type: grid
     cards:
@@ -378,29 +378,29 @@ views:
         **Glykämische Kontrolle**
         | Kennzahl | Wert | Referenz |
         |---|---|---|
-        | Mittlere Glukose | {{ states('sensor.nightscout_v3_mittlere_bg_90d') }} mg/dL | — |
-        | Standardabweichung | {{ states('sensor.nightscout_v3_sd_90d') }} mg/dL | — |
-        | Variationskoeffizient | {{ states('sensor.nightscout_v3_cv_90d') }} % | ≤ 36 % |
-        | GMI | {{ states('sensor.nightscout_v3_gmi_90d') }} % | individuell |
-        | eHbA1c (DCCT) | {{ states('sensor.nightscout_v3_hba1c_90d') }} % | — |
-        | LBGI | {{ states('sensor.nightscout_v3_lbgi_90d') }} | < 2,5 |
-        | HBGI | {{ states('sensor.nightscout_v3_hbgi_90d') }} | < 9 |
+        | Mittlere Glukose | {{ states('sensor.nightscout_v3_stat_mean_90d') }} mg/dL | — |
+        | Standardabweichung | {{ states('sensor.nightscout_v3_stat_sd_90d') }} mg/dL | — |
+        | Variationskoeffizient | {{ states('sensor.nightscout_v3_stat_cv_90d') }} % | ≤ 36 % |
+        | GMI | {{ states('sensor.nightscout_v3_stat_gmi_90d') }} % | individuell |
+        | eHbA1c (DCCT) | {{ states('sensor.nightscout_v3_stat_hba1c_90d') }} % | — |
+        | LBGI | {{ states('sensor.nightscout_v3_stat_lbgi_90d') }} | < 2,5 |
+        | HBGI | {{ states('sensor.nightscout_v3_stat_hbgi_90d') }} | < 9 |
 
         **Time in Range**
         | Bereich | Anteil | Ziel |
         |---|---|---|
-        | < 54 mg/dL | {{ states('sensor.nightscout_v3_tir_sehr_niedrig_90d') }} % | < 1 % |
-        | 54–69 mg/dL | {{ states('sensor.nightscout_v3_tir_niedrig_90d') }} % | < 4 % (ges.) |
-        | 70–180 mg/dL | **{{ states('sensor.nightscout_v3_tir_im_zielbereich_90d') }} %** | > 70 % |
-        | 181–250 mg/dL | {{ states('sensor.nightscout_v3_tir_hoch_90d') }} % | < 25 % (ges.) |
-        | > 250 mg/dL | {{ states('sensor.nightscout_v3_tir_sehr_hoch_90d') }} % | < 5 % |
+        | < 54 mg/dL | {{ states('sensor.nightscout_v3_stat_tir_very_low_90d') }} % | < 1 % |
+        | 54–69 mg/dL | {{ states('sensor.nightscout_v3_stat_tir_low_90d') }} % | < 4 % (ges.) |
+        | 70–180 mg/dL | **{{ states('sensor.nightscout_v3_stat_tir_in_range_90d') }} %** | > 70 % |
+        | 181–250 mg/dL | {{ states('sensor.nightscout_v3_stat_tir_high_90d') }} % | < 25 % (ges.) |
+        | > 250 mg/dL | {{ states('sensor.nightscout_v3_stat_tir_very_high_90d') }} % | < 5 % |
 
         **Verlauf 14 / 30 / 90 d**
         | Fenster | TIR | GMI | CV |
         |---|---|---|---|
-        | 14 d | {{ states('sensor.nightscout_v3_tir_im_zielbereich_14d') }} % | {{ states('sensor.nightscout_v3_gmi_14d') }} % | {{ states('sensor.nightscout_v3_cv_14d') }} % |
-        | 30 d | {{ states('sensor.nightscout_v3_tir_im_zielbereich_30d') }} % | {{ states('sensor.nightscout_v3_gmi_30d') }} % | {{ states('sensor.nightscout_v3_cv_30d') }} % |
-        | 90 d | {{ states('sensor.nightscout_v3_tir_im_zielbereich_90d') }} % | {{ states('sensor.nightscout_v3_gmi_90d') }} % | {{ states('sensor.nightscout_v3_cv_90d') }} % |
+        | 14 d | {{ states('sensor.nightscout_v3_stat_tir_in_range_14d') }} % | {{ states('sensor.nightscout_v3_stat_gmi_14d') }} % | {{ states('sensor.nightscout_v3_stat_cv_14d') }} % |
+        | 30 d | {{ states('sensor.nightscout_v3_stat_tir_in_range_30d') }} % | {{ states('sensor.nightscout_v3_stat_gmi_30d') }} % | {{ states('sensor.nightscout_v3_stat_cv_30d') }} % |
+        | 90 d | {{ states('sensor.nightscout_v3_stat_tir_in_range_90d') }} % | {{ states('sensor.nightscout_v3_stat_gmi_90d') }} % | {{ states('sensor.nightscout_v3_stat_cv_90d') }} % |
 
         ---
         *Referenzwerte nach International Consensus on Time in Range (Battelino et al., Diabetes Care 2019).*

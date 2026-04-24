@@ -37,13 +37,13 @@ apex_config:
             formatter: |
               EVAL:function(w) { return Math.round(w.globals.seriesTotals[2]) + '%' }
 series:
-  - entity: sensor.nightscout_v3_tir_sehr_niedrig_90d
+  - entity: sensor.nightscout_v3_stat_tir_very_low_90d
     name: "<54"
-  - entity: sensor.nightscout_v3_tir_niedrig_90d
+  - entity: sensor.nightscout_v3_stat_tir_low_90d
     name: "54–69"
-  - entity: sensor.nightscout_v3_tir_im_zielbereich_90d
+  - entity: sensor.nightscout_v3_stat_tir_in_range_90d
     name: "70–180 (Ziel)"
-  - entity: sensor.nightscout_v3_tir_hoch_90d
+  - entity: sensor.nightscout_v3_stat_tir_high_90d
     name: "181–250"
-  - entity: sensor.nightscout_v3_tir_sehr_hoch_90d
+  - entity: sensor.nightscout_v3_stat_tir_very_high_90d
     name: ">250"

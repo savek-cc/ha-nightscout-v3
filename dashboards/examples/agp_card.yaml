@@ -48,35 +48,35 @@ apex_config:
         borderColor: "#7e1e1e"
         strokeDashArray: 4
 series:
-  - entity: sensor.nightscout_v3_agp_perzentile_14d
+  - entity: sensor.nightscout_v3_stat_agp_14d
     name: p5
     data_generator: |
       const arr = entity.attributes.p5_by_hour || [];
       const d = new Date(); d.setUTCHours(0,0,0,0);
       const base = d.getTime();
       return arr.map((v, i) => [base + i * 3600000, v]);
-  - entity: sensor.nightscout_v3_agp_perzentile_14d
+  - entity: sensor.nightscout_v3_stat_agp_14d
     name: p25
     data_generator: |
       const arr = entity.attributes.p25_by_hour || [];
       const d = new Date(); d.setUTCHours(0,0,0,0);
       const base = d.getTime();
       return arr.map((v, i) => [base + i * 3600000, v]);
-  - entity: sensor.nightscout_v3_agp_perzentile_14d
+  - entity: sensor.nightscout_v3_stat_agp_14d
     name: Median
     data_generator: |
       const arr = entity.attributes.p50_by_hour || [];
       const d = new Date(); d.setUTCHours(0,0,0,0);
       const base = d.getTime();
       return arr.map((v, i) => [base + i * 3600000, v]);
-  - entity: sensor.nightscout_v3_agp_perzentile_14d
+  - entity: sensor.nightscout_v3_stat_agp_14d
     name: p75
     data_generator: |
       const arr = entity.attributes.p75_by_hour || [];
       const d = new Date(); d.setUTCHours(0,0,0,0);
       const base = d.getTime();
       return arr.map((v, i) => [base + i * 3600000, v]);
-  - entity: sensor.nightscout_v3_agp_perzentile_14d
+  - entity: sensor.nightscout_v3_stat_agp_14d
     name: p95
     data_generator: |
       const arr = entity.attributes.p95_by_hour || [];
