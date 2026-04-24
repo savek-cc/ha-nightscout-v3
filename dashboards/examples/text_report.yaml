@@ -1,0 +1,36 @@
+# Markdown-Bericht über 90 Tage – reine Built-in-Card, keine HACS-Abhängigkeit.
+# Ideal als Screenshot oder Browser-Druck → PDF in den Arztbrief.
+type: markdown
+content: |
+  ### CGM-Bericht – 90 Tage
+  Erstellt: {{ now().strftime('%d.%m.%Y %H:%M') }}
+
+  **Glykämische Kontrolle**
+  | Kennzahl | Wert | Referenz |
+  |---|---|---|
+  | Mittlere Glukose | {{ states('sensor.nightscout_v3_mittlere_bg_90d') }} mg/dL | — |
+  | Standardabweichung | {{ states('sensor.nightscout_v3_sd_90d') }} mg/dL | — |
+  | Variationskoeffizient | {{ states('sensor.nightscout_v3_cv_90d') }} % | ≤ 36 % |
+  | GMI | {{ states('sensor.nightscout_v3_gmi_90d') }} % | individuell |
+  | eHbA1c (DCCT) | {{ states('sensor.nightscout_v3_hba1c_90d') }} % | — |
+  | LBGI | {{ states('sensor.nightscout_v3_lbgi_90d') }} | < 2,5 |
+  | HBGI | {{ states('sensor.nightscout_v3_hbgi_90d') }} | < 9 |
+
+  **Time in Range**
+  | Bereich | Anteil | Ziel |
+  |---|---|---|
+  | < 54 mg/dL | {{ states('sensor.nightscout_v3_tir_sehr_niedrig_90d') }} % | < 1 % |
+  | 54–69 mg/dL | {{ states('sensor.nightscout_v3_tir_niedrig_90d') }} % | < 4 % (ges.) |
+  | 70–180 mg/dL | **{{ states('sensor.nightscout_v3_tir_im_zielbereich_90d') }} %** | > 70 % |
+  | 181–250 mg/dL | {{ states('sensor.nightscout_v3_tir_hoch_90d') }} % | < 25 % (ges.) |
+  | > 250 mg/dL | {{ states('sensor.nightscout_v3_tir_sehr_hoch_90d') }} % | < 5 % |
+
+  **Verlauf 14 / 30 / 90 d**
+  | Fenster | TIR | GMI | CV |
+  |---|---|---|---|
+  | 14 d | {{ states('sensor.nightscout_v3_tir_im_zielbereich_14d') }} % | {{ states('sensor.nightscout_v3_gmi_14d') }} % | {{ states('sensor.nightscout_v3_cv_14d') }} % |
+  | 30 d | {{ states('sensor.nightscout_v3_tir_im_zielbereich_30d') }} % | {{ states('sensor.nightscout_v3_gmi_30d') }} % | {{ states('sensor.nightscout_v3_cv_30d') }} % |
+  | 90 d | {{ states('sensor.nightscout_v3_tir_im_zielbereich_90d') }} % | {{ states('sensor.nightscout_v3_gmi_90d') }} % | {{ states('sensor.nightscout_v3_cv_90d') }} % |
+
+  ---
+  *Referenzwerte nach International Consensus on Time in Range (Battelino et al., Diabetes Care 2019).*

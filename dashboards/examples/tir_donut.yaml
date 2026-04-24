@@ -1,0 +1,49 @@
+# TIR-Verteilung 90 Tage als Donut-Chart.
+# Mittiger Wert = TIR-im-Ziel-% (via `total.formatter` auf Series-Index 2),
+# nicht die Summe aller Segmente – die Rohsensoren sind einzeln gerundet und
+# würden sonst 99–103 % ergeben.
+#
+# Erfordert HACS: apexcharts-card.
+type: custom:apexcharts-card
+header:
+  show: true
+  title: TIR-Verteilung 90 Tage
+chart_type: donut
+apex_config:
+  chart:
+    height: 280
+  colors: ["#7e1e1e", "#e06060", "#35b94a", "#f5b841", "#c27b0e"]
+  legend:
+    position: bottom
+  dataLabels:
+    formatter: |
+      EVAL:function(val) { return val.toFixed(0) + '%' }
+  plotOptions:
+    pie:
+      donut:
+        labels:
+          show: true
+          name:
+            show: true
+            fontSize: "14px"
+          value:
+            show: true
+            fontSize: "22px"
+            formatter: |
+              EVAL:function(val) { return Math.round(Number(val)) + '%' }
+          total:
+            show: true
+            label: im Ziel
+            formatter: |
+              EVAL:function(w) { return Math.round(w.globals.seriesTotals[2]) + '%' }
+series:
+  - entity: sensor.nightscout_v3_tir_sehr_niedrig_90d
+    name: "<54"
+  - entity: sensor.nightscout_v3_tir_niedrig_90d
+    name: "54–69"
+  - entity: sensor.nightscout_v3_tir_im_zielbereich_90d
+    name: "70–180 (Ziel)"
+  - entity: sensor.nightscout_v3_tir_hoch_90d
+    name: "181–250"
+  - entity: sensor.nightscout_v3_tir_sehr_hoch_90d
+    name: ">250"

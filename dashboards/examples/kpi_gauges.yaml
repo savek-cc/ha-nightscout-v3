@@ -1,0 +1,47 @@
+# Kern-Kennzahlen als native HA-Gauges mit Ampel-Segmenten nach International
+# Consensus on Time in Range (Battelino et al., Diabetes Care 2019) /
+# ADA Standards of Care:
+#   GMI  ≤ 7,0 % grün · ≤ 7,5 % gelb · darüber rot
+#   TIR  ≥ 70 % grün · ≥ 50 % gelb · darunter rot
+#   CV   ≤ 36 % grün · ≤ 42 % gelb · darüber rot
+#
+# Keine HACS-Abhängigkeit – nur eingebaute HA-Cards.
+type: grid
+columns: 3
+square: false
+cards:
+  - type: gauge
+    entity: sensor.nightscout_v3_gmi_90d
+    name: GMI (90 d)
+    unit: "%"
+    min: 5
+    max: 10
+    needle: true
+    segments:
+      - { from: 5,   color: "#35b94a" }
+      - { from: 7,   color: "#f5b841" }
+      - { from: 7.5, color: "#c0392b" }
+
+  - type: gauge
+    entity: sensor.nightscout_v3_tir_im_zielbereich_90d
+    name: TIR 70–180 (90 d)
+    unit: "%"
+    min: 0
+    max: 100
+    needle: true
+    segments:
+      - { from: 0,  color: "#c0392b" }
+      - { from: 50, color: "#f5b841" }
+      - { from: 70, color: "#35b94a" }
+
+  - type: gauge
+    entity: sensor.nightscout_v3_cv_90d
+    name: CV (90 d)
+    unit: "%"
+    min: 0
+    max: 60
+    needle: true
+    segments:
+      - { from: 0,  color: "#35b94a" }
+      - { from: 36, color: "#f5b841" }
+      - { from: 42, color: "#c0392b" }
