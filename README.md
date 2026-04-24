@@ -137,17 +137,24 @@ initial history sync completes.
 
 This repository includes ready-to-adapt dashboard files:
 
-- `dashboards/nightscout.yaml`: a full Lovelace dashboard
-- `dashboards/examples/bg_card.yaml`: a compact glucose card
+- `dashboards/nightscout.yaml`: a full daily Lovelace dashboard (requires
+  `apexcharts-card`, `mini-graph-card`, `mushroom`, `card-mod`)
+- `dashboards/quarterly_review.yaml`: an ADA/Consensus-style report for
+  the diabetologist's visit (requires `apexcharts-card` only — built on
+  HA built-ins otherwise)
+- `dashboards/examples/bg_card.yaml`: a compact glucose card (mushroom)
 - `dashboards/examples/loop_card.yaml`: loop and pump status card
-- `dashboards/examples/agp_card.yaml`: AGP chart card
+- `dashboards/examples/agp_card.yaml`: AGP percentile ribbon (apexcharts-card)
+- `dashboards/examples/tir_donut.yaml`: TIR donut with target value in the
+  center (apexcharts-card)
+- `dashboards/examples/kpi_gauges.yaml`: three GMI / TIR / CV gauges with
+  Consensus target bands (no HACS needed)
+- `dashboards/examples/text_report.yaml`: a plain-Markdown 90-day report
+  suitable for screenshotting or printing to PDF (no HACS needed)
 
-The dashboard YAML depends on these frontend cards from HACS:
-
-- `apexcharts-card`
-- `mini-graph-card`
-- `mushroom`
-- `card-mod`
+See `docs/dashboard-setup.md` for wiring, HACS install, entity-slug
+search-and-replace, and notes on the disabled-by-default AGP / LBGI / HBGI
+sensors.
 
 ## Troubleshooting
 
