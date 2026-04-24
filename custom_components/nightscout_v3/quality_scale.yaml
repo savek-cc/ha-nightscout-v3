@@ -126,9 +126,12 @@ rules:
     comment: >
       `FeatureDef.default_enabled=False` on noisy/advanced features
       (`loop_reason`, `loop_pred_bgs`, `care_last_note`, `stat_lbgi`,
-      `stat_hbgi`, `stat_hourly_profile`, `stat_agp`). Enforced through
-      the options-flow enabled-features dict on platform setup, which
-      is the canonical place for a capability-gated integration.
+      `stat_hbgi`, `stat_hourly_profile`, `stat_agp`) is carried into
+      `Entity._attr_entity_registry_enabled_default` in `NightscoutEntity`.
+      Those entities are registered but disabled; users enable them via
+      the standard HA entity-registry UI. The options-flow
+      `enabled_features` dict is used only as a user-opt-out for
+      default-ON features.
   exception-translations:
     status: done
     comment: >

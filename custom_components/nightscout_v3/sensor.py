@@ -29,7 +29,11 @@ async def async_setup_entry(
     for f in active:
         if f.platform != Platform.SENSOR:
             continue
-        if not enabled.get(f.key, f.default_enabled):
+        # Only apply the options-flow enabled-features dict to default-ON features
+        # (user opt-out). Default-OFF features are always registered and rely on
+        # entity_registry_enabled_default=False so users opt them in via the
+        # entity-registry UI.
+        if f.default_enabled and not enabled.get(f.key, True):
             continue
         entities.append(NightscoutSensor(data.coordinator, f))
 
@@ -39,7 +43,7 @@ async def async_setup_entry(
     )
     for w in windows:
         for f in stats_feature_defs(w):
-            if not enabled.get(f.key, f.default_enabled):
+            if f.default_enabled and not enabled.get(f.key, True):
                 continue
             entities.append(NightscoutSensor(data.coordinator, f))
 

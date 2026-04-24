@@ -30,6 +30,10 @@ class NightscoutEntity(CoordinatorEntity["NightscoutCoordinator"]):
             self._attr_translation_placeholders = dict(feature.translation_placeholders)
         if feature.entity_category is not None:
             self._attr_entity_category = feature.entity_category
+        # Gold rule `entity-disabled-by-default`: noisy/advanced features are
+        # registered but disabled by default so users enable them via the
+        # standard entity-registry UI.
+        self._attr_entity_registry_enabled_default = feature.default_enabled
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
             manufacturer=MANUFACTURER,

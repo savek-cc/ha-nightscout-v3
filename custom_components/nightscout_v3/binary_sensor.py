@@ -26,7 +26,9 @@ async def async_setup_entry(
     for f in features_for_capabilities(data.capabilities):
         if f.platform != Platform.BINARY_SENSOR:
             continue
-        if not enabled.get(f.key, f.default_enabled):
+        # See sensor.py: enabled_features only applies to default-ON features.
+        # Default-OFF features are registered with entity_registry_enabled_default=False.
+        if f.default_enabled and not enabled.get(f.key, True):
             continue
         entities.append(NightscoutBinarySensor(data.coordinator, f))
     async_add_entities(entities)

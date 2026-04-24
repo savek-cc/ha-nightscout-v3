@@ -172,7 +172,7 @@ def test_binary_sensor_is_on_value_handling(monkeypatch) -> None:
 
 
 async def test_binary_sensor_disabled_feature_skipped(hass, caps) -> None:
-    """Covers branch where enabled.get(f.key, f.default_enabled) is False."""
+    """User-opt-out: setting a default-ON feature to False drops its entity entirely."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="u-skip",
@@ -223,3 +223,65 @@ async def test_binary_sensor_disabled_feature_skipped(hass, caps) -> None:
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
     assert hass.states.get("binary_sensor.test_loop_active") is None
+
+
+async def test_disabled_by_default_features_registered_but_disabled(hass, caps) -> None:
+    """Default-OFF features must be registered (not skipped) with disabled_by=INTEGRATION.
+
+    Gold rule `entity-disabled-by-default`: users enable them via the entity-
+    registry UI, not via a hidden options-flow dict. This test pins the
+    current behaviour so the Gold claim in quality_scale.yaml stays honest.
+    """
+    from homeassistant.helpers import entity_registry as er
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="u-disabled-default",
+        title="Test",
+        data={
+            "url": "https://ns.example",
+            "access_token": "t",
+            "capabilities": caps.to_dict(),
+            "capabilities_probed_at": 0,
+        },
+        # No enabled_features overrides → all default_enabled values apply.
+        options={"stats_windows": [14]},
+    )
+    entry.add_to_hass(hass)
+    with (
+        patch(
+            "custom_components.nightscout_v3.api.auth.JwtManager.initial_exchange",
+            new=AsyncMock(
+                return_value=type("S", (), {"token": "j", "iat": 0, "exp": 9999999999})()
+            ),
+        ),
+        patch(
+            "custom_components.nightscout_v3.probe_capabilities", new=AsyncMock(return_value=caps)
+        ),
+        patch(
+            "custom_components.nightscout_v3.api.client.NightscoutV3Client.get_entries",
+            new=AsyncMock(return_value=load_fixture("entries_latest")["result"]),
+        ),
+        patch(
+            "custom_components.nightscout_v3.api.client.NightscoutV3Client.get_devicestatus",
+            new=AsyncMock(return_value=load_fixture("devicestatus_latest")["result"]),
+        ),
+        patch(
+            "custom_components.nightscout_v3.api.client.NightscoutV3Client.get_last_modified",
+            new=AsyncMock(return_value=load_fixture("lastmodified")["result"]),
+        ),
+        patch(
+            "custom_components.nightscout_v3.api.client.NightscoutV3Client.get_treatments",
+            new=AsyncMock(return_value=[]),
+        ),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    ent_reg = er.async_get(hass)
+    # Sample a default-OFF sensor and assert it is registered but disabled.
+    entry_ref = ent_reg.async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_stat_agp_14d")
+    assert entry_ref is not None, "stat_agp_14d must be registered, not skipped"
+    registry_entry = ent_reg.async_get(entry_ref)
+    assert registry_entry is not None
+    assert registry_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION
