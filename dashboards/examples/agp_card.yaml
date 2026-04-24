@@ -1,31 +1,85 @@
-# The stat_agp_14d sensor exposes per-hour percentiles as attributes
-# (p5_by_hour / p25_by_hour / p50_by_hour / p75_by_hour / p95_by_hour, each a
-# 24-entry list indexed by hour 0-23). It is disabled by default; enable it in
-# HA's entity registry first. For a ribbon-style AGP, apexcharts-card can plot
-# each attribute as a separate series.
+# Ambulantes Glukoseprofil – Perzentilkurve p5/p25/Median/p75/p95 über 24 h.
+#
+# Vorbedingungen
+# --------------
+# - apexcharts-card (HACS)
+# - Der Sensor `stat_agp_14d` ist per Default deaktiviert – im Options-Flow
+#   der Integration unter Features → Statistik aktivieren. Die Attribute
+#   `p5_by_hour`…`p95_by_hour` sind jeweils 24-stellige Listen.
+#
+# Warum `data_generator` + UTC-Timestamps statt `attribute:`?
+# apexcharts-card v2.x nimmt bei `attribute:` an, dass der Wert eine Zeitreihe
+# mit Timestamps ist. 24 unbenannte Zahlen werden dann als konstanter Zustand
+# interpretiert und als flache Linie gerendert. Wir mappen die Stundenindizes
+# deshalb explizit auf UTC-Millisekunden heute 00:00 + i × 1 h.
 type: custom:apexcharts-card
 header:
   show: true
-  title: AGP – stündliche Perzentile (14 d)
-graph_span: 14d
+  title: AGP – Perzentile p5 · p25 · Median · p75 · p95 über 24 h
+chart_type: line
+graph_span: 24h
+span:
+  start: day
+apex_config:
+  chart: { height: 320, type: "line" }
+  stroke:
+    curve: smooth
+    width: [1, 2, 3, 2, 1]
+  colors: ["#9aa8bb", "#4e80ff", "#111", "#4e80ff", "#9aa8bb"]
+  xaxis:
+    type: datetime
+    labels:
+      datetimeUTC: true
+      format: "HH:mm"
+  yaxis:
+    min: 40
+    max: 360
+    decimalsInFloat: 0
+    title: { text: "mg/dL" }
+  annotations:
+    yaxis:
+      - y: 70
+        borderColor: "#e06060"
+        label: { text: "70" }
+      - y: 180
+        borderColor: "#f5b841"
+        label: { text: "180" }
+      - y: 54
+        borderColor: "#7e1e1e"
+        strokeDashArray: 4
 series:
-  - entity: sensor.nightscout_v3_stat_agp_14d
-    attribute: p5_by_hour
+  - entity: sensor.nightscout_v3_agp_perzentile_14d
     name: p5
-    stroke_width: 1
-  - entity: sensor.nightscout_v3_stat_agp_14d
-    attribute: p25_by_hour
+    data_generator: |
+      const arr = entity.attributes.p5_by_hour || [];
+      const d = new Date(); d.setUTCHours(0,0,0,0);
+      const base = d.getTime();
+      return arr.map((v, i) => [base + i * 3600000, v]);
+  - entity: sensor.nightscout_v3_agp_perzentile_14d
     name: p25
-    stroke_width: 1
-  - entity: sensor.nightscout_v3_stat_agp_14d
-    attribute: p50_by_hour
-    name: median
-    stroke_width: 2
-  - entity: sensor.nightscout_v3_stat_agp_14d
-    attribute: p75_by_hour
+    data_generator: |
+      const arr = entity.attributes.p25_by_hour || [];
+      const d = new Date(); d.setUTCHours(0,0,0,0);
+      const base = d.getTime();
+      return arr.map((v, i) => [base + i * 3600000, v]);
+  - entity: sensor.nightscout_v3_agp_perzentile_14d
+    name: Median
+    data_generator: |
+      const arr = entity.attributes.p50_by_hour || [];
+      const d = new Date(); d.setUTCHours(0,0,0,0);
+      const base = d.getTime();
+      return arr.map((v, i) => [base + i * 3600000, v]);
+  - entity: sensor.nightscout_v3_agp_perzentile_14d
     name: p75
-    stroke_width: 1
-  - entity: sensor.nightscout_v3_stat_agp_14d
-    attribute: p95_by_hour
+    data_generator: |
+      const arr = entity.attributes.p75_by_hour || [];
+      const d = new Date(); d.setUTCHours(0,0,0,0);
+      const base = d.getTime();
+      return arr.map((v, i) => [base + i * 3600000, v]);
+  - entity: sensor.nightscout_v3_agp_perzentile_14d
     name: p95
-    stroke_width: 1
+    data_generator: |
+      const arr = entity.attributes.p95_by_hour || [];
+      const d = new Date(); d.setUTCHours(0,0,0,0);
+      const base = d.getTime();
+      return arr.map((v, i) => [base + i * 3600000, v]);
