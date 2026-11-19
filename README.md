@@ -156,6 +156,16 @@ See `docs/dashboard-setup.md` for wiring, HACS install, entity-slug
 search-and-replace, and notes on the disabled-by-default AGP / LBGI / HBGI
 sensors.
 
+For a standalone CGM card, [SugarTV Card](https://github.com/wiltodelta/homeassistant-sugartv-card) (HACS) works with `nightscout_v3` out of the box, picking up `*_bg_direction` and `*_bg_stale_minutes` on its own:
+
+```yaml
+type: custom:sugartv-card
+glucose_value: sensor.nightscout_v3_bg_current
+insulin_value: sensor.nightscout_v3_loop_iob # optional
+```
+
+![SugarTV Card in a wide and a tall dashboard slot](https://raw.githubusercontent.com/wiltodelta/homeassistant-sugartv-card/v0.22.0/sugartv-card-layouts.png)
+
 ## Troubleshooting
 
 ### Setup fails with `Cannot reach the Nightscout server`
